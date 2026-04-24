@@ -1,0 +1,9 @@
+{
+  "profiles": [
+    {
+      "name": "s",
+      "config_path": "config/profiles/s.json"
+    }
+  ],
+  "last_used": "s"
+}
