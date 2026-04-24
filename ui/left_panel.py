@@ -26,9 +26,9 @@ from ui.tabs.properties_tab import PropertiesTab
 
 
 class _DeleteButton(QPushButton):
-    """ホバーで赤くなる削除ボタン"""
+    """Delete button that turns red on hover."""
     def __init__(self, parent=None):
-        super().__init__("", parent)  # テキストは使わない
+        super().__init__("", parent)  # This button is icon-only
         self._server_running = False
         self._hovered = False
         from PyQt6.QtWidgets import QSizePolicy
@@ -66,19 +66,19 @@ class _DeleteButton(QPushButton):
         w, h = self.width(), self.height()
 
         if self._server_running:
-            # 薄い赤背景・薄い赤文字
+            # Faded red background and text
             p.setBrush(QColor(239, 83, 80, 40))
             p.setPen(Qt.PenStyle.NoPen)
             p.drawRoundedRect(0, 0, w, h, 4, 4)
             p.setPen(QColor(239, 83, 80, 150))
         elif self._hovered:
-            # 赤背景・白文字
+            # Red background and white text
             p.setBrush(QColor(229, 57, 53, 255))
             p.setPen(Qt.PenStyle.NoPen)
             p.drawRoundedRect(0, 0, w, h, 4, 4)
             p.setPen(QColor(255, 255, 255, 255))
         else:
-            # 透明背景・薄い文字
+            # Transparent background and dim text
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.setPen(QColor(204, 204, 204, 80))
 
@@ -86,12 +86,12 @@ class _DeleteButton(QPushButton):
         font.setPixelSize(max(10, int(h * 0.45)))
         font.setBold(True)
         p.setFont(font)
-        text_rect = QRect(0, -int(h * 0.05), w, h)  # 上に5%ずらす
+        text_rect = QRect(0, -int(h * 0.05), w, h)  # Shift 5% upward
         p.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, "×")
 
 
 class _RenameLabel(QWidget):
-    """クリックでリネーム可能なラベル"""
+    """Label that can be renamed by clicking."""
     def __init__(self, text: str, rename_callback=None, parent=None):
         super().__init__(parent)
         self._text = text
@@ -201,14 +201,14 @@ class LeftPanel(QWidget):
         root.setContentsMargins(10, 10, 10, 10)
         root.setSpacing(6)
 
-        # ── トップバー ─────────────────────────────────
+        # Top bar
         top_bar = QHBoxLayout()
         top_bar.setContentsMargins(0, 0, 0, 0)
         top_bar.setSpacing(6)
 
         btn_size = MENU_WIDTH // 3 - 8
 
-        # ☰ ボタン（左）
+        # Menu button on the left
         self.hamburger_btn = QPushButton("☰")
         self.hamburger_btn.setFixedSize(btn_size, btn_size)
         self.hamburger_btn.setStyleSheet(STYLE_BUTTON_TRANSPARENT)
@@ -216,14 +216,14 @@ class LeftPanel(QWidget):
             self.hamburger_btn.clicked.connect(self._toggle_menu)
         top_bar.addWidget(self.hamburger_btn)
 
-        # 右側：上段（プロファイル）＋下段（タブ4つ）を二段組
+        # Right side: two rows for profile info and tabs
         right_widget = QWidget()
         right_widget.setFixedHeight(btn_size)
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(2)
 
-        # 上段：プロファイルインジケーター
+        # Top row: profile indicator
         self._profile_widget = QWidget()
         self._profile_widget.setStyleSheet(STYLE_PROFILE_HEADER)
         profile_layout = QHBoxLayout(self._profile_widget)
@@ -245,9 +245,9 @@ class LeftPanel(QWidget):
         profile_layout.addWidget(self._profile_name_label, stretch=1)
         profile_layout.addWidget(self._delete_btn)
 
-        right_layout.addWidget(self._profile_widget, stretch=1)  # 上段
+        right_layout.addWidget(self._profile_widget, stretch=1)  # Top row
 
-        # タブボタンを格納したウィジェット（グレーアウト制御用）
+        # Widget that contains tab buttons for gray-out control
         self._tab_bar_widget = QWidget()
         tab_bar_layout = QHBoxLayout(self._tab_bar_widget)
         tab_bar_layout.setContentsMargins(0, 0, 0, 0)
@@ -279,16 +279,16 @@ class LeftPanel(QWidget):
         top_bar.addWidget(right_widget, stretch=1)
         root.addLayout(top_bar)
 
-        # 区切り線
+        # Separator
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setStyleSheet(STYLE_SEPARATOR_BORDER)
         root.addWidget(line)
 
-        # ── コンテンツエリア（タブ or プレースホルダー） ──
+        # Content area for tabs or placeholder
         self._content_stack = QStackedWidget()
 
-        # タブコンテンツ
+        # Tab content
         tab_container = QWidget()
         tab_layout = QVBoxLayout(tab_container)
         tab_layout.setContentsMargins(0, 0, 0, 0)
@@ -300,13 +300,13 @@ class LeftPanel(QWidget):
         self.tab_stack.addWidget(self.jvm_tab)         # index 1
         self.tab_stack.addWidget(self.properties_tab)  # index 2
         tab_layout.addWidget(self.tab_stack)
-        self._content_stack.addWidget(tab_container)   # index 0: タブ
+        self._content_stack.addWidget(tab_container)   # index 0: tabs
 
         
 
-        # プロファイルなし時のプレースホルダー
+        # Placeholder shown when there is no profile
         placeholder = self._build_placeholder()
-        self._content_stack.addWidget(placeholder)     # index 1: プレースホルダー
+        self._content_stack.addWidget(placeholder)     # index 1: placeholder
 
         root.addWidget(self._content_stack, stretch=1)
 
@@ -314,7 +314,7 @@ class LeftPanel(QWidget):
         return view
 
     def _build_placeholder(self) -> QWidget:
-        """プロファイルが存在しない時に表示するウィジェット"""
+        """Build the widget shown when no profile exists."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -377,26 +377,26 @@ class LeftPanel(QWidget):
         self.stack.setCurrentWidget(self.add_profile_view)
 
     def _on_add_profile_confirm(self, data: dict):
-        """AppWindowに委譲する"""
+        """Delegate the action to AppWindow."""
         if self._on_profile_created:
             self._on_profile_created(data)
         self._show_main()
 
     def _on_delete_profile(self):
-        """削除ボタンクリック時"""
+        """Handle delete button clicks."""
         name = self._current_profile_name()
         if not name:
             return
         self._show_delete_overlay(name)
 
     def _on_rename_profile(self, new_name: str):
-        """リネーム確定時"""
+        """Handle confirmed profile renames."""
         old_name = self._current_profile_name()
         if not old_name:
             return
         if rename_profile(old_name, new_name):
             self._profile_name_label.set_text(new_name)
-            # AppWindowに通知
+            # Notify AppWindow
             self._notify_app("profile_renamed", old_name=old_name, new_name=new_name)
 
     def _current_profile_name(self) -> str:
@@ -404,7 +404,7 @@ class LeftPanel(QWidget):
         return label if label != lang.get("ui.profile.untitled") else ""
 
     def _show_delete_overlay(self, name: str):
-        # AppWindowのcentralWidgetの上にオーバーレイを表示
+        # Show the overlay above AppWindow's central widget
         central = self._get_central()
         if not central:
             return
@@ -425,7 +425,7 @@ class LeftPanel(QWidget):
 
     def _on_delete_confirmed(self, name: str, delete_dir: bool):
         self._close_delete_overlay()
-        # AppWindowに委譲
+        # Delegate to AppWindow
         self._notify_app("profile_deleted", name=name, delete_dir=delete_dir)
 
     def _get_central(self):
@@ -445,20 +445,20 @@ class LeftPanel(QWidget):
             parent = parent.parent() if hasattr(parent, "parent") else None
 
     def set_server_running(self, running: bool):
-        """サーバー起動状態をインジケーターに反映"""
+        """Reflect server running state in the indicator."""
         if hasattr(self, "_delete_btn"):
             self._delete_btn.set_server_running(running)
         if hasattr(self, "_profile_name_label"):
             self._profile_name_label.set_server_running(running)
         
     def set_has_profile(self, has_profile: bool):
-        """プロファイルの有無に応じてUIを切り替える"""
+        """Switch the UI based on whether a profile exists."""
         if not hasattr(self, "_content_stack"):
             return
 
         if has_profile:
-            self._content_stack.setCurrentIndex(0)  # タブを表示
-            # タブボタンを有効化
+            self._content_stack.setCurrentIndex(0)  # Show tabs
+            # Enable tab buttons
             for btn, idx in self._tab_btns:
                 if idx is not None:
                     btn.setEnabled(True)
@@ -466,8 +466,8 @@ class LeftPanel(QWidget):
                         STYLE_TAB_BUTTON_INACTIVE
                     )
         else:
-            self._content_stack.setCurrentIndex(1)  # プレースホルダーを表示
-            # タブボタンをグレーアウト
+            self._content_stack.setCurrentIndex(1)  # Show placeholder
+            # Gray out tab buttons
             for btn, idx in self._tab_btns:
                 btn.setEnabled(False)
                 btn.setStyleSheet(STYLE_TAB_BUTTON_INACTIVE)

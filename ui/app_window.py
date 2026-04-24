@@ -83,16 +83,16 @@ class AppWindow(QMainWindow):
         )
         self.right_panel = RightPanel(central)
 
-        # ログコールバックを接続
+        # Connect the log callback
         self.left_panel.basic_tab.set_log_callback(
             self.right_panel.log_display.append_log
         )
 
-        # 起動/停止コールバックを接続
+        # Connect start and stop callbacks
         self.left_panel.basic_tab.start_btn.clicked.connect(self._on_start_server)
         self.left_panel.basic_tab.stop_btn.clicked.connect(self._on_stop_server)
 
-        # コマンド送信コールバックを接続
+        # Connect the command send callback
         self.right_panel.set_send_command_callback(self._on_send_command)
 
 
@@ -142,12 +142,12 @@ class AppWindow(QMainWindow):
         self._apply_profile(profile)
 
     def _apply_profile(self, profile: dict):
-        """プロファイルをUIに反映する"""
+        """Apply a profile to the UI."""
         self._current_profile = profile
         self.left_panel.apply_profile(profile)
 
     def _on_select_profile(self, name: str):
-        """プロファイルリストから選択されたとき"""
+        """Handle selecting a profile from the profile list."""
         profiles = get_all_profiles()
         profile = next((p for p in profiles if p["name"] == name), None)
         if profile:
@@ -222,7 +222,7 @@ class AppWindow(QMainWindow):
             save_profile(entry["config_path"], profile)
 
         self._overlay_menu.refresh()
-        self.left_panel.set_has_profile(True)  # ← 追加
+        self.left_panel.set_has_profile(True)
         self._on_select_profile(data["name"])
 
     def _on_start_server(self):
@@ -234,7 +234,7 @@ class AppWindow(QMainWindow):
 
         self.right_panel.log_display.clear()
         profile = dict(self._current_profile)
-        # BasicタブのUIからserver_dirを取得
+        # Get server_dir from the Basic tab UI
         profile["server_dir"] = self.left_panel.basic_tab.dir_entry.text().strip()
 
         self._server_process = ServerProcess(profile)

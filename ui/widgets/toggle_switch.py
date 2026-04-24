@@ -8,9 +8,9 @@ from PyQt6.QtGui import QPainter, QColor
 
 class ToggleSwitch(QCheckBox):
     """
-    左右スライド式トグルスイッチ。
+    Horizontal sliding toggle switch.
     OFF: rgba(80, 80, 80, 255)
-    ON:  rgba(31, 106, 165, 255)  ← アクセントカラーに統一
+    ON:  rgba(31, 106, 165, 255), aligned with the accent color.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -40,7 +40,7 @@ class ToggleSwitch(QCheckBox):
         self._anim.start()
 
     def mousePressEvent(self, event):
-        """クリック領域全体でトグル発生"""
+        """Toggle when any part of the control is clicked."""
         if event.button() == Qt.MouseButton.LeftButton:
             self.setChecked(not self.isChecked())
 
@@ -53,7 +53,7 @@ class ToggleSwitch(QCheckBox):
 
         if self.isEnabled():
             off_bg = QColor(80, 80, 80, 255)
-            on_bg  = QColor(31, 106, 165, 255)  # アクセントカラー
+            on_bg  = QColor(31, 106, 165, 255)  # Accent color
         else:
             off_bg = QColor(55, 55, 55, 255)
             on_bg  = QColor(25, 70, 110, 255)
@@ -66,12 +66,12 @@ class ToggleSwitch(QCheckBox):
             255
         )
 
-        # トラック
+        # Track
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(bg)
         p.drawRoundedRect(QRectF(0, 0, w, h), r, r)
 
-        # ハンドル
+        # Handle
         padding  = 3
         handle_r = r - padding
         travel   = w - h

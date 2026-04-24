@@ -28,7 +28,7 @@ from core.version_fetcher import (
 BRANDS = ["vanilla", "fabric", "neoforge", "spigot", "paper"]
 FILTER_CATEGORIES = ["release", "snapshot", "beta", "alpha"]
 
-# ブランドごとの有効フィルター
+# Available filters by brand
 BRAND_FILTERS = {
     "vanilla":  {"release", "snapshot", "beta", "alpha"},
     "fabric":   {"release", "snapshot"},
@@ -59,12 +59,12 @@ class BasicTab(QWidget):
             self._log_callback(message)
 
     def _build(self):
-        # 外枠レイアウト（スクロール＋固定ボタンの2段構成）
+        # Outer layout with scroll area and fixed buttons
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
 
-        # ── スクロールエリア ───────────────────────────
+        # Scroll area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -77,7 +77,7 @@ class BasicTab(QWidget):
         layout.setSpacing(12)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # ── サーバーディレクトリ ───────────────────────
+        # Server directory
         dir_label = QLabel(lang.get("ui.left.server_directory"))
         dir_label.setToolTip(lang.get("ui.left.server_directory.tooltip"))
         layout.addWidget(dir_label)
@@ -95,8 +95,8 @@ class BasicTab(QWidget):
         dir_row.addWidget(browse_btn)
         layout.addLayout(dir_row)
 
-        # ── ブランド（左） + MCバージョン（右）────────
-        # 左端を揃えるためにQGridLayoutを使う
+        # Brand on the left and Minecraft version on the right
+        # Use QGridLayout to align the left edges
         from PyQt6.QtWidgets import QGridLayout
         grid = QGridLayout()
         grid.setSpacing(6)
@@ -119,7 +119,7 @@ class BasicTab(QWidget):
         self.version_combo.currentTextChanged.connect(self._on_mc_version_changed)
         grid.addWidget(self.version_combo, 1, 1)
 
-        # ── Loaderバージョン（右列のみ） ───────────────
+        # Loader version in the right column only
         self._loader_ver_label = QLabel(lang.get("ui.basic.loader_version"))
         grid.addWidget(self._loader_ver_label, 2, 1)
 
@@ -133,7 +133,7 @@ class BasicTab(QWidget):
 
         layout.addWidget(self._make_separator())
 
-        # ── EULA ──────────────────────────────────────
+        # EULA
         eula_row = QHBoxLayout()
         self.eula_checkbox = QCheckBox(lang.get("ui.basic.eula"))
         self.eula_checkbox.setToolTip(lang.get("ui.basic.eula.tooltip"))
@@ -143,13 +143,13 @@ class BasicTab(QWidget):
         eula_row.addStretch()
         layout.addLayout(eula_row)
 
-        # ── 詳細設定（折りたたみ） ─────────────────────
+        # Collapsible advanced settings
         self._advanced = CollapsibleSection(
             lang.get("ui.add_profile.advanced"),
             expanded=False
         )
 
-        # バージョンフィルター
+        # Version filter
         filter_label = QLabel(lang.get("ui.add_profile.version.filter.label"))
         filter_label.setStyleSheet(
             STYLE_LABEL_SECONDARY_SMALL
@@ -172,7 +172,7 @@ class BasicTab(QWidget):
         filter_layout.addStretch()
         self._advanced.add_widget(filter_widget)
 
-        # Javaパス
+        # Java path
         custom_java_row = QHBoxLayout()
         self.custom_java_checkbox = QCheckBox(lang.get("ui.basic.custom_java"))
         self.custom_java_checkbox.setToolTip(lang.get("ui.basic.custom_java.tooltip"))
@@ -215,7 +215,7 @@ class BasicTab(QWidget):
         custom_java_col.addLayout(java_row)
         self._advanced.add_widget(custom_java_widget)
 
-        # カスタムjar
+        # Custom jar
         custom_jar_widget = QWidget()
         custom_jar_widget.setStyleSheet(STYLE_TRANSPARENT_BG)
         custom_jar_col = QVBoxLayout(custom_jar_widget)
@@ -260,7 +260,7 @@ class BasicTab(QWidget):
         scroll.setWidget(inner)
         outer.addWidget(scroll, stretch=1)
 
-        # ── 固定ボタンエリア（スクロール外） ──────────
+        # Fixed button area outside the scroll area
         btn_area = QWidget()
         btn_area.setStyleSheet(STYLE_BOTTOM_ACTION_BAR)
         btn_layout = QVBoxLayout(btn_area)
@@ -294,7 +294,7 @@ class BasicTab(QWidget):
 
         outer.addWidget(btn_area)
 
-    # ── ユーティリティ ─────────────────────────────────
+    # Utilities
 
     def _make_separator(self) -> QFrame:
         line = QFrame()
@@ -333,7 +333,7 @@ class BasicTab(QWidget):
             STYLE_LABEL_DISABLED_SMALL
         )
 
-    # ── フェッチ ───────────────────────────────────────
+    # Fetching
 
     def _start_fetch(self):
         self.version_combo.clear()
@@ -449,7 +449,7 @@ class BasicTab(QWidget):
             if idx >= 0:
                 self.loader_combo.setCurrentIndex(idx)
 
-    # ── コールバック ───────────────────────────────────
+    # Callbacks
 
     def _on_brand_changed(self, brand: str):
         self._refresh_loader_visibility()
@@ -659,7 +659,7 @@ class BasicTab(QWidget):
         self.jar_entry.setText(profile.get("jar_path", ""))
         self._refresh_jar_ui(custom_jar)
 
-        # どちらかにチェックが入っていればAdvanced Settingsを開く
+        # Open advanced settings when either option is enabled
         if custom_java or custom_jar:
             self._advanced.set_expanded(True)
         else:
@@ -680,7 +680,7 @@ class BasicTab(QWidget):
         }
     
     def _notify_jvm_tab(self):
-        """JVMタブにプロファイル変更を通知する"""
+        """Notify the JVM tab that profile settings changed."""
         parent = self.parent()
         while parent:
             if hasattr(parent, "jvm_tab"):

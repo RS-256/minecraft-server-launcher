@@ -7,7 +7,7 @@ from ui.app_window import AppWindow
 
 
 def main():
-    # 必要なディレクトリ・ファイルを初期化
+    # Initialize required directories and files
     get_profiles_config_dir()
     ensure_profile_default()
 

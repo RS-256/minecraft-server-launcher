@@ -29,13 +29,13 @@ def get_assets_dir() -> str:
 
 
 def get_server_profiles_dir() -> str:
-    """サーバーファイル置き場（profiles/）"""
+    """Directory that stores server files under profiles/."""
     path = os.path.join(get_base_dir(), "profiles")
     os.makedirs(path, exist_ok=True)
     return path
 
 
-# ── デフォルト設定 ────────────────────────────────────────────
+# Default settings
 
 PROFILE_DEFAULTS = {
     "name": "",
@@ -64,15 +64,15 @@ _PROFILES_INDEX_DEFAULTS = {
 }
 
 
-# ── profile_default.json ──────────────────────────────────────
+# profile_default.json
 
 def ensure_profile_default() -> None:
-    """profile_default.jsonがなければ作成する"""
+    """Create profile_default.json if it does not exist."""
     if not os.path.exists(_PROFILE_DEFAULT_PATH):
         _write_json(_PROFILE_DEFAULT_PATH, PROFILE_DEFAULTS)
 
 
-# ── profiles.json（インデックス） ─────────────────────────────
+# profiles.json index
 
 def load_profiles_index() -> dict:
     if not os.path.exists(_PROFILES_INDEX_PATH):
@@ -85,10 +85,10 @@ def save_profiles_index(index: dict) -> None:
     _write_json(_PROFILES_INDEX_PATH, index)
 
 
-# ── 個別プロファイル ──────────────────────────────────────────
+# Individual profiles
 
 def load_profile(config_path: str) -> dict:
-    """個別プロファイルを読み込む。不足キーはデフォルト値で補完する"""
+    """Load a profile and fill missing keys with default values."""
     abs_path = os.path.join(get_base_dir(), config_path)
     if not os.path.exists(abs_path):
         return PROFILE_DEFAULTS.copy()
@@ -106,8 +106,8 @@ def save_profile(config_path: str, profile: dict) -> None:
 
 def create_profile(name: str) -> str:
     """
-    新しいプロファイルを作成してconfig_pathを返す。
-    profiles.jsonにも追記する。
+    Create a new profile and return its config_path.
+    Also append it to profiles.json.
     """
     safe_name = _to_safe_filename(name)
     config_path = f"config/profiles/{safe_name}.json"
@@ -130,7 +130,7 @@ def create_profile(name: str) -> str:
 
 
 def delete_profile(name: str) -> None:
-    """プロファイルをインデックスから削除し、jsonファイルも消す"""
+    """Remove a profile from the index and delete its JSON file."""
     index = load_profiles_index()
     entry = next((p for p in index["profiles"] if p["name"] == name), None)
     if entry is None:
@@ -145,7 +145,7 @@ def delete_profile(name: str) -> None:
 
 
 def get_all_profiles() -> list[dict]:
-    """全プロファイルの内容を読み込んで返す"""
+    """Load and return all profiles."""
     index = load_profiles_index()
     result = []
     for entry in index["profiles"]:
@@ -156,7 +156,7 @@ def get_all_profiles() -> list[dict]:
 
 
 def get_last_used_profile() -> dict | None:
-    """最後に使ったプロファイルを返す"""
+    """Return the most recently used profile."""
     index = load_profiles_index()
     last = index.get("last_used")
     if not last:
@@ -173,7 +173,7 @@ def set_last_used(name: str) -> None:
     save_profiles_index(index)
 
 
-# ── ユーティリティ ────────────────────────────────────────────
+# Utilities
 
 def _read_json(path: str) -> dict:
     with open(path, encoding="utf-8") as f:
@@ -187,38 +187,38 @@ def _write_json(path: str, data: dict) -> None:
 
 
 def _to_safe_filename(name: str) -> str:
-    """プロファイル名をファイル名として安全な文字列に変換する"""
+    """Convert a profile name to a safe filename."""
     safe = re.sub(r'[\\/*?:"<>|]', "_", name)
     safe = safe.strip().replace(" ", "_").lower()
     return safe or "profile"
 
 def rename_profile(old_name: str, new_name: str) -> bool:
-    """プロファイル名を変更する。成功したらTrueを返す。"""
+    """Rename a profile and return True on success."""
     index = load_profiles_index()
     entry = next((p for p in index["profiles"] if p["name"] == old_name), None)
     if not entry:
         return False
 
-    # 重複チェック
+    # Check for duplicate names
     if any(p["name"] == new_name for p in index["profiles"]):
         return False
 
     profile = load_profile(entry["config_path"])
     profile["name"] = new_name
 
-    # 新しいファイル名で保存
+    # Save with the new filename
     new_safe = _to_safe_filename(new_name)
     new_config_path = f"config/profiles/{new_safe}.json"
     new_abs = os.path.join(get_base_dir(), new_config_path)
 
-    # 古いファイルを削除して新しいパスに保存
+    # Delete the old file and save to the new path
     old_abs = os.path.join(get_base_dir(), entry["config_path"])
     if os.path.exists(old_abs):
         os.remove(old_abs)
 
     save_profile(new_config_path, profile)
 
-    # インデックス更新
+    # Update the index
     entry["name"]        = new_name
     entry["config_path"] = new_config_path
 

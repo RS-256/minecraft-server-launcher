@@ -8,11 +8,11 @@ VANILLA_MANIFEST_URL = "https://launchermeta.mojang.com/mc/game/version_manifest
 
 
 class ServerDownloader(QThread):
-    """サーバーjarをダウンロードするスレッド"""
+    """Thread that downloads server jars."""
     progress  = pyqtSignal(int, int)   # (downloaded_bytes, total_bytes)
-    finished  = pyqtSignal(str)        # 保存先パス
-    failed    = pyqtSignal(str)        # エラーメッセージ
-    log       = pyqtSignal(str)        # ログメッセージ
+    finished  = pyqtSignal(str)        # Saved file path
+    failed    = pyqtSignal(str)        # Error message
+    log       = pyqtSignal(str)        # Log message
 
     def __init__(self, profile: dict, parent=None):
         super().__init__(parent)
@@ -74,15 +74,15 @@ class ServerDownloader(QThread):
     def _get_fabric_url(self, mc_version: str, loader_version: str) -> tuple[str, str]:
         if not loader_version:
             raise ValueError("Fabric loader version is not set.")
-        # URL形式: /loader/<mc_version>/<loader_version>/<installer_version>/server/jar
-        # installer_versionは0で最新を指定
+        # URL format: /loader/<mc_version>/<loader_version>/<installer_version>/server/jar
+        # Use installer_version=0 to request the latest installer
         url = (
             f"https://meta.fabricmc.net/v2/versions/loader/"
             f"{mc_version}/{loader_version}/0/server/jar"
         )
         self.log.emit(f"[INFO] Fabric URL: {url}")
 
-        # 事前にURLが有効か確認
+        # Validate the URL before starting the download
         import urllib.request
         try:
             req = urllib.request.Request(url, method="HEAD")

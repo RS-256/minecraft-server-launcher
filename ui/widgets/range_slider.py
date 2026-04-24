@@ -5,7 +5,7 @@ from PyQt6.QtGui import QPainter, QColor, QPen, QBrush
 
 
 def get_max_ram_mb() -> int:
-    """マシンの合計RAMをMB単位で512MB刻みに切り捨てて返す"""
+    """Return total system RAM in MB, rounded down to a 512 MB step."""
     total = psutil.virtual_memory().total
     total_mb = total // (1024 * 1024)
     return (total_mb // 512) * 512

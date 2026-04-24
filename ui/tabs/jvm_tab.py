@@ -31,7 +31,7 @@ class JvmTab(QWidget):
         layout.setSpacing(14)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # 実行ファイル名
+        # Executable file name
         file_label = QLabel(lang.get("ui.left.file_name"))
         file_label.setToolTip(lang.get("ui.left.file_name.tooltip"))
         layout.addWidget(file_label)
@@ -42,7 +42,7 @@ class JvmTab(QWidget):
 
         layout.addWidget(self._make_separator())
 
-        # RAMスライダー
+        # RAM slider
         ram_label = QLabel(lang.get("ui.jvm.ram"))
         ram_label.setToolTip(lang.get("ui.jvm.ram.tooltip"))
         layout.addWidget(ram_label)
@@ -50,7 +50,7 @@ class JvmTab(QWidget):
         self.ram_slider.mouseReleaseEvent = self._on_slider_released
         layout.addWidget(self.ram_slider)
 
-        # nogui トグル
+        # nogui toggle
         nogui_row = QHBoxLayout()
         self.nogui_label = QLabel(lang.get("ui.jvm.nogui"))
         self.nogui_label.setToolTip(lang.get("ui.jvm.nogui.tooltip"))
@@ -63,7 +63,7 @@ class JvmTab(QWidget):
 
         layout.addWidget(self._make_separator())
 
-        # カスタムJVMフラグ
+        # Custom JVM flags
         custom_row = QHBoxLayout()
         self.custom_checkbox = QCheckBox(lang.get("ui.jvm.custom_flag"))
         self.custom_checkbox.setToolTip(lang.get("ui.jvm.custom_flag.tooltip"))
@@ -84,7 +84,7 @@ class JvmTab(QWidget):
         self.bat_editor.textChanged.connect(self._on_bat_text_changed)
         layout.addWidget(self.bat_editor)
 
-        # 初期化ボタン
+        # Reset button
         reset_row = QHBoxLayout()
         reset_row.addStretch()
         self.reset_btn = QPushButton(lang.get("ui.jvm.reset"))
@@ -108,7 +108,7 @@ class JvmTab(QWidget):
         else:
             self.bat_editor.setStyleSheet(STYLE_TEXT_EDIT_INACTIVE)
 
-    # ── ヘルパー ───────────────────────────────────────
+    # Helpers
 
     def _get_bat_path(self) -> str:
         server_dir = self._current_profile.get("server_dir", "")
@@ -124,27 +124,27 @@ class JvmTab(QWidget):
 
     def _get_jar(self) -> str:
         """
-        使用するjarのパスまたは名前を返す。
-        custom_jar=True → jar_pathのフルパス
-        custom_jar=False → server_dir内のjarを検索
+        Return the jar path or name to use.
+        custom_jar=True -> full jar_path
+        custom_jar=False -> search for a jar inside server_dir
         """
         if self._current_profile.get("custom_jar", False):
             return self._current_profile.get("jar_path", "")
 
-        # server_dir内のjarを検索
+        # Search for a jar inside server_dir
         server_dir = self._current_profile.get("server_dir", "")
         if server_dir and os.path.isdir(server_dir):
             for f in os.listdir(server_dir):
                 if f.endswith(".jar"):
-                    return f  # ファイル名のみ返す（cwdがserver_dirになるため）
+                    return f  # Return only the file name because cwd is server_dir
         return "server.jar"
 
-    # ── UI→JSON→bat の更新 ────────────────────────────
+    # UI -> JSON -> bat updates
 
     def _sync(self):
         """
-        UIの現在値をJSONに保存してbatを再生成する。
-        これが唯一の更新経路。
+        Save current UI values to JSON and regenerate the bat file.
+        This is the only update path.
         """
         if self._updating:
             return
@@ -153,14 +153,14 @@ class JvmTab(QWidget):
         ram_max = self.ram_slider.high
         nogui   = self.nogui_toggle.isChecked()
 
-        # JSONに保存
+        # Save to JSON
         self._save_field(
             ram_min_mb=ram_min,
             ram_max_mb=ram_max,
             nogui=nogui,
         )
 
-        # batを再生成してプレビューを更新
+        # Regenerate the bat file and update the preview
         bat_path = self._get_bat_path()
         java     = self._get_java()
         jar      = self._get_jar()
@@ -178,7 +178,7 @@ class JvmTab(QWidget):
         self.bat_editor.setPlainText(content)
         self._updating = False
 
-    # ── UIイベント ─────────────────────────────────────
+    # UI events
 
     def _on_slider_released(self, event):
         RangeSlider.mouseReleaseEvent(self.ram_slider, event)
@@ -199,13 +199,13 @@ class JvmTab(QWidget):
             self._sync()
 
     def _on_bat_text_changed(self):
-        """カスタムモード時のみ保存"""
+        """Save only while in custom mode."""
         if self._updating:
             return
         if self.custom_checkbox.isChecked():
             content = self.bat_editor.toPlainText()
             self._save_field(custom_bat=content)
-            # カスタムモードはbatに直接書き込む
+            # Custom mode writes directly to the bat file
             bat_path = self._get_bat_path()
             if bat_path:
                 write_bat(bat_path, content)
@@ -240,13 +240,13 @@ class JvmTab(QWidget):
                 self.bat_editor.setPlainText(custom_bat)
                 self._updating = False
 
-    # ── 外部通知 ───────────────────────────────────────
+    # External notifications
 
     def notify_profile_changed(self):
-        """BasicTabから設定変更（jar/java等）を通知される"""
+        """Receive profile setting changes such as jar and Java path from BasicTab."""
         self._sync()
 
-    # ── プロファイル保存 ───────────────────────────────
+    # Profile persistence
 
     def _save_field(self, **kwargs):
         name = self._current_profile.get("name", "")
@@ -255,10 +255,10 @@ class JvmTab(QWidget):
         self._current_profile.update(kwargs)
         save_profile_field(name, **kwargs)
 
-    # ── 公開メソッド ───────────────────────────────────
+    # Public methods
 
     def set_values(self, profile: dict):
-        """プロファイルを読み込んでUIとbatを更新する"""
+        """Load a profile and update the UI and bat preview."""
         self._current_profile = profile
         self._updating = True
 
@@ -293,7 +293,7 @@ class JvmTab(QWidget):
                 self.bat_editor.setPlainText(custom_bat)
                 self._updating = False
         else:
-            # JSONの値からbatを再生成してプレビューに表示
+            # Regenerate the bat file from JSON values and show it in the preview
             self._sync()
 
     def get_values(self) -> dict:

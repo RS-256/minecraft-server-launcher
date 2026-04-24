@@ -55,21 +55,21 @@ class AddProfileView(QWidget):
         layout.setSpacing(12)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # 戻るボタン
+        # Back button
         back_btn = QPushButton(lang.get("ui.settings.back"))
         back_btn.setFixedWidth(100)
         back_btn.setStyleSheet(STYLE_BUTTON_TRANSPARENT)
         back_btn.clicked.connect(self._on_back)
         layout.addWidget(back_btn)
 
-        # タイトル
+        # Title
         title = QLabel(lang.get("ui.dialog.new_profile.title"))
         title.setStyleSheet(
             f"font-size: {FONT_SIZE_LARGE}px; font-weight: bold;"
         )
         layout.addWidget(title)
 
-        # プロファイル名
+        # Profile name
         layout.addWidget(QLabel(lang.get("ui.dialog.new_profile.name")))
         self.name_input = QLineEdit()
         self.name_input.setStyleSheet(STYLE_INPUT)
@@ -78,7 +78,7 @@ class AddProfileView(QWidget):
         )
         layout.addWidget(self.name_input)
 
-        # ディレクトリ選択
+        # Directory picker
         layout.addWidget(QLabel(lang.get("ui.add_profile.directory")))
         dir_row = QHBoxLayout()
         self.dir_input = QLineEdit()
@@ -92,7 +92,7 @@ class AddProfileView(QWidget):
         dir_row.addWidget(browse_btn)
         layout.addLayout(dir_row)
 
-        # ブランド + MCバージョン 横並び
+        # Brand and Minecraft version side by side
         brand_ver_row = QHBoxLayout()
         brand_ver_row.setSpacing(8)
 
@@ -120,10 +120,10 @@ class AddProfileView(QWidget):
 
         layout.addLayout(brand_ver_row)
 
-        # Loaderバージョン（MCバージョンの下に配置）
+        # Loader version, placed below the Minecraft version
         loader_row = QHBoxLayout()
         loader_row.setSpacing(8)
-        loader_row.addStretch(2)  # ブランド列幅分のスペース
+        loader_row.addStretch(2)  # Space matching the brand column width
 
         loader_col = QVBoxLayout()
         loader_col.setSpacing(4)
@@ -136,13 +136,13 @@ class AddProfileView(QWidget):
         loader_row.addLayout(loader_col, stretch=3)
         layout.addLayout(loader_row)
 
-        # 詳細設定（折りたたみ）
+        # Collapsible advanced settings
         self._advanced = CollapsibleSection(
             lang.get("ui.add_profile.advanced"),
             expanded=False
         )
 
-        # バージョンフィルター
+        # Version filter
         filter_label = QLabel(lang.get("ui.add_profile.version.filter.label"))
         filter_label.setStyleSheet(
             STYLE_LABEL_SECONDARY_SMALL
@@ -165,7 +165,7 @@ class AddProfileView(QWidget):
         filter_layout.addStretch()
         self._advanced.add_widget(filter_widget)
 
-        # Javaパス
+        # Java path
         java_label = QLabel(lang.get("ui.add_profile.java_path"))
         java_label.setStyleSheet(
             STYLE_LABEL_SECONDARY_SMALL
@@ -192,7 +192,7 @@ class AddProfileView(QWidget):
 
         layout.addWidget(self._advanced)
 
-        # エラーラベル
+        # Error label
         self.error_label = QLabel("")
         self.error_label.setStyleSheet(
             STYLE_LABEL_DANGER_SMALL
@@ -201,7 +201,7 @@ class AddProfileView(QWidget):
 
         layout.addStretch()
 
-        # 作成ボタン
+        # Create button
         self.confirm_btn = QPushButton(lang.get("ui.add_profile.confirm"))
         self.confirm_btn.setStyleSheet(STYLE_BUTTON)
         self.confirm_btn.clicked.connect(self._on_confirm)
@@ -244,7 +244,7 @@ class AddProfileView(QWidget):
             fetcher.finished.connect(self._on_fetch_finished)
             fetcher.failed.connect(self._on_fetch_failed)
 
-        # 完了時にリストから除去
+        # Remove completed threads from the list
         fetcher.finished.connect(lambda _=None: self._remove_thread(fetcher))
         fetcher.failed.connect(lambda _=None: self._remove_thread(fetcher))
 
@@ -253,7 +253,7 @@ class AddProfileView(QWidget):
         fetcher.start()
 
     def _reset_loader_combo(self):
-        """Loaderコンボをリセットする"""
+        """Reset the loader combo box."""
         self.loader_combo.clear()
         self.loader_combo.setEnabled(False)
 
@@ -264,7 +264,7 @@ class AddProfileView(QWidget):
             else STYLE_LABEL_PRIMARY_SMALL
         )
 
-        # ブランドごとに有効なフィルターカテゴリを定義
+        # Define available filter categories by brand
         available = {
             "vanilla":  {"release", "snapshot", "beta", "alpha"},
             "fabric":   {"release", "snapshot"},
@@ -279,24 +279,24 @@ class AddProfileView(QWidget):
                 STYLE_CHECKBOX if cat in available
                 else STYLE_CHECKBOX + STYLE_CHECKBOX_DISABLED_TEXT
             )
-            # 利用不可のカテゴリはチェックを外す
+            # Uncheck unavailable categories
             if cat not in available:
                 cb.setChecked(False)
-            # releaseは常にデフォルトON
+            # Keep release enabled by default
             elif cat == "release":
                 cb.setChecked(True)
 
         self._start_fetch()
 
     def _on_fetch_finished(self, versions: list):
-        """Vanilla/Fabric MCバージョン一覧取得完了"""
+        """Handle completed Vanilla/Fabric Minecraft version fetches."""
         self._all_versions = versions
         self._refresh_version_combo()
 
     def _on_neoforge_fetch_finished(self, mc_map: dict):
         self._neoforge_map = mc_map
 
-        # MCバージョンのタイプを判定（各MCバージョンの最初のビルドのmc_typeを参照）
+        # Determine each Minecraft version type from the first build's mc_type
         self._all_versions = []
         for mc_ver, builds in mc_map.items():
             mc_type = builds[0].get("mc_type", "release") if builds else "release"
@@ -317,14 +317,14 @@ class AddProfileView(QWidget):
         )
 
     def _refresh_version_combo(self):
-        """フィルターに応じてMCバージョンプルダウンを更新する"""
+        """Refresh the Minecraft version dropdown based on filters."""
         brand = self.brand_combo.currentText()
         enabled_types = {
             cat for cat, cb in self._filter_checks.items() if cb.isChecked()
         }
 
         if brand == "neoforge":
-            # NeoForgeはreleaseとbetaのみ
+            # NeoForge supports only release and beta here
             filtered = [
                 v for v in self._all_versions
                 if v["type"] in enabled_types
@@ -353,11 +353,11 @@ class AddProfileView(QWidget):
         self.version_combo.setEnabled(True)
         self.version_combo.blockSignals(False)
 
-        # 選択中のMCバージョンのloaderをフェッチ
+        # Fetch loaders for the selected Minecraft version
         self._on_mc_version_changed(self.version_combo.currentText())
 
     def _on_mc_version_changed(self, mc_version: str):
-        """MCバージョン選択時にLoaderバージョンを更新する"""
+        """Refresh loader versions when a Minecraft version is selected."""
         brand = self.brand_combo.currentText()
         self._reset_loader_combo()
 
@@ -369,7 +369,7 @@ class AddProfileView(QWidget):
             return
 
         if brand == "vanilla":
-            # Vanillaはloader不要
+            # Vanilla does not need a loader
             self.loader_combo.addItem(lang.get("ui.add_profile.loader_version.na"))
             self.loader_combo.setEnabled(False)
 
@@ -385,7 +385,7 @@ class AddProfileView(QWidget):
             loader_fetcher.start()
 
         elif brand == "neoforge":
-            # ローカルのマップからNeoForgeビルド一覧を取得
+            # Read NeoForge builds from the local map
             builds = self._neoforge_map.get(mc_version, [])
             if builds:
                 for b in builds:
@@ -396,7 +396,7 @@ class AddProfileView(QWidget):
                 self.loader_combo.setEnabled(False)
 
         else:
-            # spigot/paperは暫定でvanillaと同様
+            # Treat Spigot and Paper like Vanilla for now
             self.loader_combo.addItem(lang.get("ui.add_profile.loader_version.na"))
             self.loader_combo.setEnabled(False)
 
@@ -471,6 +471,6 @@ class AddProfileView(QWidget):
             })
 
     def _remove_thread(self, thread):
-        """完了したスレッドをリストから除去する"""
+        """Remove a completed thread from the list."""
         if thread in self._active_threads:
             self._active_threads.remove(thread)

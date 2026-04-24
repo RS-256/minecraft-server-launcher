@@ -69,7 +69,7 @@ class FabricVersionFetcher(QThread):
 
 
 class FabricLoaderFetcher(QThread):
-    """特定MCバージョン向けのFabric Loaderバージョン一覧を取得する"""
+    """Fetch Fabric Loader versions for a specific Minecraft version."""
     finished = pyqtSignal(list)   # [{"id": "0.16.5", "stable": True}, ...]
     failed   = pyqtSignal(str)
 
@@ -114,7 +114,7 @@ class NeoForgeVersionFetcher(QThread):
                 if not mc_ver:
                     continue
 
-                # NeoForge自身のカテゴリ
+                # NeoForge's own category
                 if "+snapshot" in raw:
                     nf_category = "snapshot"
                 elif "alpha" in raw.split("+")[0]:
@@ -129,7 +129,7 @@ class NeoForgeVersionFetcher(QThread):
                 mc_map[mc_ver].append({
                     "id":      raw,
                     "type":    nf_category,
-                    "mc_type": mc_type,  # MCバージョン自体のタイプ
+                    "mc_type": mc_type,  # Minecraft version type
                 })
 
             for mc_ver in mc_map:
@@ -143,21 +143,21 @@ class NeoForgeVersionFetcher(QThread):
 
     def _extract_mc_info(self, neoforge_ver: str) -> tuple[str, str]:
         """
-        NeoForgeバージョン文字列からMCバージョンとMCのタイプを返す。
-        戻り値: (mc_version, mc_type)
+        Return the Minecraft version and type from a NeoForge version string.
+        Return value: (mc_version, mc_type)
         mc_type: "release" | "snapshot"
 
-        例:
-          "21.1.226"                        → ("1.21.1", "release")
-          "26.1.0.0-alpha.1+snapshot-1"     → ("26.1 snapshot-1", "snapshot")
-          "26.1.0.1-beta"                   → ("26.1.0", "release")
-          "26.1.2.7-beta"                   → ("26.1.2", "release")
+        Examples:
+          "21.1.226"                        -> ("1.21.1", "release")
+          "26.1.0.0-alpha.1+snapshot-1"     -> ("26.1 snapshot-1", "snapshot")
+          "26.1.0.1-beta"                   -> ("26.1.0", "release")
+          "26.1.2.7-beta"                   -> ("26.1.2", "release")
         """
         mc_type = "release"
 
-        # +snapshot-X を含む場合はMC側がsnapshot
+        # +snapshot-X means the Minecraft side is a snapshot
         if "+snapshot" in neoforge_ver:
-            snapshot_part = neoforge_ver.split("+snapshot")[1]  # "-1" など
+            snapshot_part = neoforge_ver.split("+snapshot")[1]  # e.g. "-1"
             clean = neoforge_ver.split("+")[0]  # "26.1.0.0-alpha.1"
             clean = re.split(r"-", clean)[0]    # "26.1.0.0"
             parts = clean.split(".")
@@ -168,7 +168,7 @@ class NeoForgeVersionFetcher(QThread):
             mc_type = "snapshot"
             return mc_ver, mc_type
 
-        # 通常処理
+        # Normal handling
         clean = re.split(r"[-+]", neoforge_ver)[0]
         parts = clean.split(".")
         if len(parts) < 2:

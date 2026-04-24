@@ -6,7 +6,7 @@ from ui.theme import STYLE_COLLAPSIBLE_HEADER, STYLE_TRANSPARENT_BG
 
 
 class CollapsibleSection(QWidget):
-    """折りたたみ可能なセクション"""
+    """Collapsible section widget."""
     def __init__(self, title: str, parent=None, expanded: bool = False):
         super().__init__(parent)
         self._expanded = expanded
@@ -17,14 +17,14 @@ class CollapsibleSection(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # ヘッダーボタン
+        # Header button
         self._header = QPushButton()
         self._header.setStyleSheet(STYLE_COLLAPSIBLE_HEADER)
         self._update_header(title)
         self._header.clicked.connect(self._toggle)
         layout.addWidget(self._header)
 
-        # コンテンツエリア
+        # Content area
         self._content = QWidget()
         self._content.setStyleSheet(STYLE_TRANSPARENT_BG)
         self._content_layout = QVBoxLayout(self._content)
@@ -51,7 +51,7 @@ class CollapsibleSection(QWidget):
         self._content_layout.addLayout(layout)
     
     def set_expanded(self, expanded: bool):
-        """外部から展開状態を設定する"""
+        """Set the expanded state from outside this widget."""
         if self._expanded == expanded:
             return
         self._expanded = expanded

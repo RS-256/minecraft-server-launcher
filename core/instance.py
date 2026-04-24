@@ -18,7 +18,7 @@ def save_profile_field(profile_name: str, **kwargs) -> None:
 
 
 def check_eula(server_dir: str) -> bool:
-    """eula.txtが存在してeula=trueが含まれているか確認する"""
+    """Return whether eula.txt exists and contains eula=true."""
     if not server_dir:
         return False
     eula_path = os.path.join(server_dir, "eula.txt")

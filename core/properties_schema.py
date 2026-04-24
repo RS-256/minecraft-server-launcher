@@ -1,4 +1,4 @@
-# Minecraft server.properties のスキーマ定義
+# Schema definitions for Minecraft server.properties
 
 KNOWN_PROPERTIES: dict[str, dict] = {
     "server-port":          {"type": "int",    "default": 25565, "min": 1, "max": 65535},
@@ -72,7 +72,7 @@ KNOWN_PROPERTIES: dict[str, dict] = {
     "text-filtering-config": {"type": "str", "default": ""},
 }
 
-# 上部に優先表示するプロパティの順序
+# Properties shown first in the UI
 PRIORITY_KEYS: list[str] = [
     "server-port",
     "max-players",

@@ -25,7 +25,7 @@ from core.properties_parser import (
 
 
 class _PropRow(QWidget):
-    """1プロパティ分の行ウィジェット"""
+    """Row widget for one property."""
     def __init__(self, key: str, value: str, parent=None):
         super().__init__(parent)
         self._key  = key
@@ -37,7 +37,7 @@ class _PropRow(QWidget):
         layout.setContentsMargins(0, 2, 0, 2)
         layout.setSpacing(8)
 
-        # キーラベル
+        # Key label
         key_label = QLabel(self._key)
         key_label.setStyleSheet(
             STYLE_LABEL_SECONDARY_SMALL
@@ -46,7 +46,7 @@ class _PropRow(QWidget):
         key_label.setToolTip(self._key)
         layout.addWidget(key_label)
 
-        # 値ウィジェット
+        # Value widget
         self._widget = self._make_widget(value)
         layout.addWidget(self._widget, stretch=1)
 
@@ -83,7 +83,7 @@ class _PropRow(QWidget):
             return entry
 
     def get_value(self) -> str:
-        """現在の値を文字列で返す"""
+        """Return the current value as a string."""
         t = self._meta["type"]
         if t == "bool":
             return "true" if self._widget.isChecked() else "false"
@@ -106,24 +106,24 @@ class PropertiesTab(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # メインスタック（ファイルなし / 通常 / カスタム）
+        # Main stack: no file, normal mode, or custom mode
         self._main_stack = QStackedWidget()
 
-        # ── index 0: ファイルなしプレースホルダー ──────
+        # index 0: no-file placeholder
         placeholder = self._build_placeholder()
         self._main_stack.addWidget(placeholder)
 
-        # ── index 1: 通常モード ────────────────────────
+        # index 1: normal mode
         self._normal_widget = self._build_normal()
         self._main_stack.addWidget(self._normal_widget)
 
-        # ── index 2: カスタムモード ────────────────────
+        # index 2: custom mode
         self._custom_widget = self._build_custom()
         self._main_stack.addWidget(self._custom_widget)
 
         layout.addWidget(self._main_stack, stretch=1)
 
-        # ── 下部固定バー ───────────────────────────────
+        # Fixed bottom bar
         self._bottom_bar = self._build_bottom_bar()
         layout.addWidget(self._bottom_bar)
 
@@ -188,7 +188,7 @@ class PropertiesTab(QWidget):
         layout.setContentsMargins(12, 6, 12, 8)
         layout.setSpacing(8)
 
-        # カスタムモードチェックボックス
+        # Custom mode checkbox
         self._custom_checkbox = QCheckBox(lang.get("ui.properties.custom_mode"))
         self._custom_checkbox.setToolTip(lang.get("ui.properties.custom_mode.tooltip"))
         self._custom_checkbox.setStyleSheet(STYLE_CHECKBOX)
@@ -197,7 +197,7 @@ class PropertiesTab(QWidget):
 
         layout.addStretch()
 
-        # ステータスラベル
+        # Status label
         self._status_label = QLabel("")
         self._status_label.setStyleSheet(
             STYLE_LABEL_SECONDARY_SMALL +
@@ -205,14 +205,14 @@ class PropertiesTab(QWidget):
         )
         layout.addWidget(self._status_label)
 
-        # 再読み込みボタン
+        # Reload button
         reload_btn = QPushButton(lang.get("ui.properties.reload"))
         reload_btn.setStyleSheet(STYLE_BUTTON)
         reload_btn.setFixedWidth(90)
         reload_btn.clicked.connect(self._on_reload)
         layout.addWidget(reload_btn)
 
-        # 保存ボタン
+        # Save button
         save_btn = QPushButton(lang.get("ui.properties.save"))
         save_btn.setStyleSheet(STYLE_BUTTON)
         save_btn.setFixedWidth(70)
@@ -221,18 +221,18 @@ class PropertiesTab(QWidget):
 
         return bar
 
-    # ── プロパティ行の構築 ─────────────────────────────
+    # Property row construction
 
     def _build_prop_rows(self, props: dict[str, str]):
-        """読み込んだプロパティからUIを構築する"""
-        # 既存のウィジェットをクリア
+        """Build UI rows from loaded properties."""
+        # Clear existing widgets
         while self._inner_layout.count():
             item = self._inner_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         self._prop_rows.clear()
 
-        # 優先プロパティセクション
+        # Priority properties section
         priority_shown = []
         for key in PRIORITY_KEYS:
             if key in props:
@@ -246,7 +246,7 @@ class PropertiesTab(QWidget):
                 self._inner_layout.addWidget(row)
             self._inner_layout.addWidget(self._make_separator())
 
-        # その他プロパティセクション
+        # Other properties section
         other_keys = [k for k in props if k not in PRIORITY_KEYS]
         if other_keys:
             self._add_section_label(lang.get("ui.properties.section.other"))
@@ -274,12 +274,12 @@ class PropertiesTab(QWidget):
         line.setStyleSheet(STYLE_SEPARATOR_SUBTLE)
         return line
 
-    # ── イベント ───────────────────────────────────────
+    # Events
 
     def _on_custom_toggled(self, checked: bool):
         self._custom_mode = checked
         if checked:
-            # 通常モードの現在値をrawに反映
+            # Reflect current normal-mode values into raw text
             raw = self._collect_as_raw()
             self._raw_editor.setPlainText(raw)
             self._main_stack.setCurrentIndex(2)
@@ -305,7 +305,7 @@ class PropertiesTab(QWidget):
                 lang.get("ui.properties.save_failed").format(e)
             )
 
-    # ── ヘルパー ───────────────────────────────────────
+    # Helpers
 
     def _get_properties_path(self) -> str:
         server_dir = self._current_profile.get("server_dir", "")
@@ -314,25 +314,25 @@ class PropertiesTab(QWidget):
         return os.path.join(server_dir, "server.properties")
 
     def _collect_props(self) -> dict[str, str]:
-        """UIから全プロパティを収集してdictで返す"""
+        """Collect all properties from the UI and return them as a dict."""
         return {key: row.get_value() for key, row in self._prop_rows.items()}
 
     def _collect_as_raw(self) -> str:
-        """UIから収集してraw文字列に変換"""
+        """Collect values from the UI and convert them to raw text."""
         props = self._collect_props()
         lines = ["# Minecraft server properties"]
         for k, v in props.items():
             lines.append(f"{k}={v}")
         return "\n".join(lines) + "\n"
 
-    # ── 公開メソッド ───────────────────────────────────
+    # Public methods
 
     def load_properties(self, profile: dict):
         self._current_profile = profile
         path = self._get_properties_path()
 
         if not path or not os.path.exists(path):
-            self._main_stack.setCurrentIndex(0)  # ファイルなし
+            self._main_stack.setCurrentIndex(0)  # No file
             self._bottom_bar.hide()
             return
 

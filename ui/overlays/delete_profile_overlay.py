@@ -17,7 +17,7 @@ from core.lang import lang
 
 
 class DeleteProfileOverlay(QWidget):
-    """プロファイル削除確認オーバーレイ"""
+    """Overlay that confirms profile deletion."""
 
     def __init__(self, parent, profile_name: str,
                  confirm_callback, cancel_callback):
@@ -36,7 +36,7 @@ class DeleteProfileOverlay(QWidget):
         outer = QVBoxLayout(self)
         outer.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # ── ダイアログカード ───────────────────────────
+        # Dialog card
         card = QWidget()
         card.setFixedWidth(360)
         card.setStyleSheet(STYLE_DIALOG_CARD)
@@ -44,7 +44,7 @@ class DeleteProfileOverlay(QWidget):
         card_layout.setContentsMargins(24, 24, 24, 24)
         card_layout.setSpacing(16)
 
-        # タイトル
+        # Title
         title = QLabel(lang.get("ui.delete_profile.title"))
         title.setStyleSheet(
             f"font-size: {FONT_SIZE_LARGE}px; font-weight: bold;"
@@ -52,7 +52,7 @@ class DeleteProfileOverlay(QWidget):
         )
         card_layout.addWidget(title)
 
-        # 説明
+        # Description
         desc = QLabel(
             lang.get("ui.delete_profile.desc").format(self._profile_name)
         )
@@ -60,19 +60,19 @@ class DeleteProfileOverlay(QWidget):
         desc.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         card_layout.addWidget(desc)
 
-        # ディレクトリ削除チェックボックス（赤）
+        # Red checkbox for deleting the directory
         self.delete_dir_checkbox = QCheckBox(lang.get("ui.delete_profile.delete_dir"))
         self.delete_dir_checkbox.setChecked(False)
         self.delete_dir_checkbox.setStyleSheet(STYLE_CHECKBOX_DANGER)
         card_layout.addWidget(self.delete_dir_checkbox)
 
-        # 区切り線
+        # Separator
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
         sep.setStyleSheet(STYLE_SEPARATOR_BORDER)
         card_layout.addWidget(sep)
 
-        # プロファイル名入力
+        # Profile name input
         confirm_label = QLabel(
             lang.get("ui.delete_profile.type_name").format(self._profile_name)
         )
@@ -88,7 +88,7 @@ class DeleteProfileOverlay(QWidget):
         self.name_input.textChanged.connect(self._on_text_changed)
         card_layout.addWidget(self.name_input)
 
-        # ボタン行
+        # Button row
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 

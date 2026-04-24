@@ -2,17 +2,17 @@ from pathlib import Path
 
 # ---------------------------------------------------
 
-# 背景色
+# Background colors
 COLOR_BG_PRIMARY        = "rgb(30, 30, 30)"
 COLOR_BG_SECONDARY      = "rgb(37, 37, 37)"
 COLOR_BG_TERTIARY       = "rgb(43, 43, 43)"
 COLOR_BG_DEEP           = "rgb(26, 26, 26)"
 
-# アクセント
+# Accent colors
 COLOR_ACCENT            = "rgb(31, 106, 165)"
 COLOR_ACCENT_HOVER      = "rgb(40, 120, 184)"
 
-# テキスト
+# Text colors
 COLOR_TEXT_PRIMARY      = "rgb(204, 204, 204)"
 COLOR_TEXT_BRIGHT       = "rgb(220, 220, 220)"
 COLOR_TEXT_SECONDARY    = "rgb(170, 170, 170)"
@@ -20,11 +20,11 @@ COLOR_TEXT_MUTED        = "rgb(102, 102, 102)"
 COLOR_TEXT_DIM          = "rgb(90, 90, 90)"
 COLOR_TEXT_DISABLED     = "rgb(136, 136, 136)"
 
-# ボーダー
+# Border colors
 COLOR_BORDER            = "rgb(58, 58, 58)"
 COLOR_BORDER_STRONG     = "rgb(51, 51, 51)"
 
-# 状態色
+# Status colors
 COLOR_SUCCESS           = "rgb(46, 125, 50)"
 COLOR_SUCCESS_HOVER     = "rgb(56, 142, 60)"
 COLOR_DANGER            = "rgb(198, 40, 40)"
@@ -34,16 +34,16 @@ COLOR_DANGER_STRONG     = "rgb(216, 0, 0)"
 COLOR_WARNING           = "rgb(255, 183, 77)"
 COLOR_DISABLED          = "rgb(68, 68, 68)"
 
-# トグルスイッチ
+# Toggle switch colors
 COLOR_TOGGLE_ON_BG      = "rgba(76, 175, 80, 255)"
 COLOR_TOGGLE_OFF_BG     = "rgba(80, 80, 80, 255)"
 COLOR_TOGGLE_HANDLE     = "rgba(255, 255, 255, 255)"
 
-# オーバーレイ
-COLOR_OVERLAY_BG        = "rgba(0, 0, 0, 100)"    # 半透明グレー
-COLOR_OVERLAY_MENU_BG   = "rgb(37, 37, 37)"        # メニュー背景（不透明）
+# Overlay colors
+COLOR_OVERLAY_BG        = "rgba(0, 0, 0, 100)"    # Semi-transparent gray
+COLOR_OVERLAY_MENU_BG   = "rgb(37, 37, 37)"        # Opaque menu background
 
-# サイズ
+# Sizes
 FONT_SIZE_DEFAULT       = 13
 FONT_SIZE_SMALL         = 11
 FONT_SIZE_LARGE         = 16
@@ -286,16 +286,16 @@ STYLE_OVERLAY_MENU = f"""
     QLabel {{ color: {COLOR_TEXT_SECONDARY}; }}
 """
 
-# タブ
+# Tabs
 COLOR_TAB_ACTIVE        = "rgb(31, 106, 165)"
 COLOR_TAB_INACTIVE      = "rgb(43, 43, 43)"
 COLOR_TAB_HOVER         = "rgb(55, 55, 55)"
 
-# ステータスインジケーター
+# Status indicators
 COLOR_STATUS_ONLINE     = "rgba(76, 175, 80, 255)"
 COLOR_STATUS_OFFLINE    = "rgb(120, 120, 120)"
 
-# カード・セクション
+# Cards and sections
 COLOR_CARD_BG           = "rgb(37, 37, 37)"
 COLOR_CARD_BORDER       = "rgb(55, 55, 55)"
 

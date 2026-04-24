@@ -12,7 +12,7 @@ from core.lang import lang
 
 
 class LogDisplay(QTextEdit):
-    """透かしロゴ付きログ表示エリア"""
+    """Log display area with a watermark logo."""
     def __init__(self, watermark_text: str = "MC Server Launcher", parent=None):
         super().__init__(parent)
         self._watermark = watermark_text
@@ -35,7 +35,7 @@ class LogDisplay(QTextEdit):
         )
 
     def append_log(self, line: str):
-        """ログ行を色分けして追加する"""
+        """Append a log line with severity-based coloring."""
         line_lower = line.lower()
         if any(k in line_lower for k in ["error", "exception", "fatal", "severe"]):
             color = COLOR_DANGER_BRIGHT
@@ -60,7 +60,7 @@ class RightPanel(QWidget):
         layout.setContentsMargins(0, 10, 10, 10)
         layout.setSpacing(0)
 
-        # ヘッダー
+        # Header
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         header.setSpacing(0)
@@ -86,7 +86,7 @@ class RightPanel(QWidget):
         line.setStyleSheet(STYLE_SEPARATOR_BORDER + " margin-bottom: 4px;")
         layout.addWidget(line)
 
-        # ログ表示
+        # Log display
         self.log_stack = QStackedWidget()
 
         self.log_display = LogDisplay(lang.get("ui.right.watermark"))
@@ -99,7 +99,7 @@ class RightPanel(QWidget):
         self.log_stack.addWidget(self.crash_display)
         layout.addWidget(self.log_stack, stretch=1)
 
-        # コマンド入力
+        # Command input
         cmd_frame = QFrame()
         cmd_frame.setStyleSheet(STYLE_COMMAND_FRAME)
         cmd_layout = QHBoxLayout(cmd_frame)

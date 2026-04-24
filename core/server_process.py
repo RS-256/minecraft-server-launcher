@@ -6,9 +6,9 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 def _find_jar(profile: dict) -> str | None:
     """
-    起動するjarファイルのパスを返す。
-    custom_jar=Trueなら jar_path を直接使用。
-    そうでなければ server_dir 内をブランドのパターンで検索。
+    Return the jar file path to launch.
+    Use jar_path directly when custom_jar=True.
+    Otherwise, search server_dir with brand-specific patterns.
     """
     if profile.get("custom_jar", False):
         jar = profile.get("jar_path", "")
@@ -22,16 +22,16 @@ def _find_jar(profile: dict) -> str | None:
     version = profile.get("version", "")
     loader  = profile.get("loader_version", "")
 
-    # ブランドごとの優先パターン
+    # Preferred patterns per brand
     patterns = _jar_patterns(brand, version, loader)
 
-    # パターン順に検索
+    # Search in pattern order
     for pattern in patterns:
         path = os.path.join(server_dir, pattern)
         if os.path.exists(path):
             return path
 
-    # パターンに一致しなければ .jar を全探索して最初のものを返す
+    # If no pattern matches, return the first .jar in the directory
     for f in os.listdir(server_dir):
         if f.endswith(".jar"):
             return os.path.join(server_dir, f)
@@ -71,9 +71,9 @@ def _jar_patterns(brand: str, version: str, loader: str) -> list[str]:
 
 def _find_java(profile: dict) -> str:
     """
-    使用するjavaコマンドを返す。
-    1. profile の java_path
-    2. フォールバック: "java"
+    Return the Java command to use.
+    1. java_path from the profile
+    2. Fallback: "java"
     """
     java_path = profile.get("java_path", "").strip()
     if java_path and os.path.exists(java_path):
@@ -90,7 +90,7 @@ def _build_command(profile: dict, jar_path: str) -> list[str]:
             return custom_bat.split()
         return [java, "-jar", jar_path]
 
-    # custom_jarが指定されている場合はそちらを使う
+    # Use the custom jar path when one is configured
     if profile.get("custom_jar", False):
         custom_jar_path = profile.get("jar_path", "").strip()
         if custom_jar_path and os.path.exists(custom_jar_path):
@@ -113,57 +113,19 @@ def _build_command(profile: dict, jar_path: str) -> list[str]:
 
 
 class ServerProcess(QThread):
-    """サーバープロセスを管理するスレッド"""
-    log_received = pyqtSignal(str)   # ログ行を emit
-    started_ok   = pyqtSignal()      # 起動成功
-    stopped      = pyqtSignal(int)   # 停止（終了コード）
-    failed       = pyqtSignal(str)   # 起動失敗
+    """Thread that manages the server process."""
+    log_received = pyqtSignal(str)   # Emit a log line
+    started_ok   = pyqtSignal()      # Started successfully
+    stopped      = pyqtSignal(int)   # Stopped with exit code
+    failed       = pyqtSignal(str)   # Failed to start
 
     def __init__(self, profile: dict, parent=None):
         super().__init__(parent)
         self._profile = profile
         self._process: subprocess.Popen | None = None
 
-#    def run(self):
-#        jar_path = _find_jar(self._profile)
-#        if not jar_path:
-#            self.failed.emit("Server jar not found.")
-#            return
-#
-#        server_dir = self._profile.get("server_dir", "")
-#        cmd = _build_command(self._profile, jar_path)
-#
-#        self.log_received.emit(f"[INFO] Starting server...")
-#        self.log_received.emit(f"[INFO] Command: {' '.join(cmd)}")
-#        self.log_received.emit(f"[INFO] Working directory: {server_dir}")
-#
-#        try:
-#            self._process = subprocess.Popen(
-#                cmd,
-#                cwd=server_dir,
-#                stdout=subprocess.PIPE,
-#                stderr=subprocess.STDOUT,
-#                stdin=subprocess.PIPE,
-#                text=True,
-#                encoding="utf-8",
-#                errors="replace",
-#                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-#            )
-#        except Exception as e:
-#            self.failed.emit(str(e))
-#            return
-#
-#        self.started_ok.emit()
-#
-#        # ログをリアルタイムで読む
-#        for line in self._process.stdout:
-#            self.log_received.emit(line.rstrip())
-#
-#        exit_code = self._process.wait()
-#        self.stopped.emit(exit_code)
-
     def send_command(self, command: str):
-        """サーバーにコマンドを送信する"""
+        """Send a command to the server."""
         if self._process and self._process.stdin:
             try:
                 self._process.stdin.write(command + "\n")
@@ -172,11 +134,11 @@ class ServerProcess(QThread):
                 pass
 
     def stop(self):
-        """サーバーを停止する（stopコマンドを送信）"""
+        """Stop the server by sending the stop command."""
         self.send_command("stop")
 
     def kill(self):
-        """強制終了"""
+        """Force-kill the process."""
         if self._process:
             self._process.kill()
     
@@ -205,7 +167,7 @@ class ServerProcess(QThread):
                 cmd = [exec_path]
 
         else:
-            # exec_fileが存在しない → jarから起動コマンドを生成
+            # exec_file does not exist, so build the launch command from the jar
             jar_path = _find_jar(self._profile)
             if not jar_path:
                 self.failed.emit(
@@ -215,7 +177,7 @@ class ServerProcess(QThread):
 
             cmd = _build_command(self._profile, jar_path)
 
-            # start.batを自動生成
+            # Auto-generate start.bat
             if exec_file.endswith(".bat"):
                 self._generate_bat(exec_path, cmd)
                 self.log_received.emit(f"[INFO] Generated: {exec_path}")
@@ -250,7 +212,7 @@ class ServerProcess(QThread):
         self.stopped.emit(exit_code)
 
     def _generate_bat(self, bat_path: str, cmd: list[str]):
-        """start.batを自動生成する"""
+        """Auto-generate start.bat."""
         with open(bat_path, "w", encoding="utf-8") as f:
             f.write("@echo off\n")
             f.write(" ".join(cmd) + "\n")

@@ -49,22 +49,22 @@ class ProfileIcon(QWidget):
 
 
 class ScrollingLabel(QWidget):
-    """はみ出した場合にホバーで等速横スクロール→左端に戻って繰り返す"""
+    """Scroll overflowing text at a constant speed on hover, then loop."""
     def __init__(self, text: str, style: str = "", parent=None):
         super().__init__(parent)
         self._text = text
         self._scrolling = False
 
-        # スクロールアニメーション
+        # Scroll animation
         self._anim = QPropertyAnimation()
         self._anim.finished.connect(self._on_anim_finished)
 
-        # 開始ディレイタイマー
+        # Start delay timer
         self._start_timer = QTimer(self)
         self._start_timer.setSingleShot(True)
         self._start_timer.timeout.connect(self._start_scroll)
 
-        # 折り返しポーズタイマー（右端到達後に少し待つ）
+        # Pause after reaching the right edge
         self._pause_timer = QTimer(self)
         self._pause_timer.setSingleShot(True)
         self._pause_timer.timeout.connect(self._restart_scroll)
@@ -119,7 +119,7 @@ class ScrollingLabel(QWidget):
         if travel <= 0:
             return
 
-        # 等速：30px/秒
+        # Constant speed: 30 px/s
         duration = int(travel / 30 * 1000)
 
         self._anim = QPropertyAnimation(bar, b"value")
@@ -133,14 +133,14 @@ class ScrollingLabel(QWidget):
     def _on_anim_finished(self):
         if not self._scrolling:
             return
-        # 右端到達→800ms待ってリセット
+        # After reaching the right edge, wait 800 ms before resetting
         self._pause_timer.start(800)
 
     def _restart_scroll(self):
         if not self._scrolling:
             return
         self._scroll.horizontalScrollBar().setValue(0)
-        # 少し待ってから再スクロール
+        # Wait briefly before scrolling again
         QTimer.singleShot(300, self._do_scroll_forward)
 
 
@@ -162,19 +162,19 @@ class ProfileListItem(QWidget):
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(10)
 
-        # アイコン
+        # Icon
         brand = self._profile.get("brand", "vanilla")
         icon = ProfileIcon(brand, self._running)
         layout.addWidget(icon)
 
-        # テキスト部分
+        # Text area
         text_widget = QWidget()
         text_widget.setStyleSheet(STYLE_TRANSPARENT_BG)
         text_layout = QVBoxLayout(text_widget)
         text_layout.setContentsMargins(0, 0, 0, 0)
         text_layout.setSpacing(3)
 
-        # 上段：プロファイル名（スクロール対応）
+        # Top row: scrollable profile name
         name_label = ScrollingLabel(
             self._profile.get("name", ""),
             f"font-size: 13px; font-weight: bold; color: {COLOR_TEXT_BRIGHT};"
@@ -182,7 +182,7 @@ class ProfileListItem(QWidget):
         name_label.setFixedHeight(20)
         text_layout.addWidget(name_label)
 
-        # 下段：dir + brand/version 横並び（スクロール対応）
+        # Bottom row: dir plus brand/version side by side
         bottom_widget = QWidget()
         bottom_widget.setStyleSheet(STYLE_TRANSPARENT_BG)
         bottom_layout = QHBoxLayout(bottom_widget)

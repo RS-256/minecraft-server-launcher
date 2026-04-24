@@ -17,10 +17,10 @@ def write_bat(bat_path: str, content: str) -> None:
 
 def generate_bat(bat_path: str, java: str, ram_min_mb: int, ram_max_mb: int,
                  jar_name: str, nogui: bool) -> str:
-    """プロファイルの設定からbatを生成して書き込む。生成内容を返す。"""
-    # javaパスにスペースが含まれる場合は引用符で囲む
+    """Generate and write a bat file from profile settings, then return it."""
+    # Quote the Java path when it contains spaces
     java_str = f'"{java}"' if " " in java else java
-    # jarパスにスペースが含まれる場合は引用符で囲む
+    # Quote the jar path when it contains spaces
     jar_str  = f'"{jar_name}"' if " " in jar_name else jar_name
     nogui_str = " nogui" if nogui else ""
 

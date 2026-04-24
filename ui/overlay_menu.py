@@ -39,7 +39,7 @@ class OverlayMenu(QWidget):
         self._root_layout.setContentsMargins(0, 0, 0, 0)
         self._root_layout.setSpacing(0)
 
-        # トップバー
+        # Top bar
         top_widget = QWidget()
         top_widget.setStyleSheet(STYLE_TRANSPARENT_BG)
         top_layout = QHBoxLayout(top_widget)
@@ -66,14 +66,14 @@ class OverlayMenu(QWidget):
         self._root_layout.addWidget(top_widget)
         self._root_layout.addWidget(self._make_separator())
 
-        # プロファイルラベル
+        # Profile label
         profiles_label = QLabel(lang.get("ui.menu.profiles"))
         profiles_label.setStyleSheet(
             STYLE_LABEL_MUTED_SMALL + " padding: 8px 12px 4px 12px; background: transparent;"
         )
         self._root_layout.addWidget(profiles_label)
 
-        # スクロールエリア（リスト本体）
+        # Scroll area for the list body
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -82,7 +82,7 @@ class OverlayMenu(QWidget):
         self._refresh_list()
 
     def _refresh_list(self):
-        """プロファイルリストを再構築する"""
+        """Rebuild the profile list."""
         list_widget = QWidget()
         list_widget.setStyleSheet(STYLE_TRANSPARENT_BG)
         list_layout = QVBoxLayout(list_widget)
@@ -129,7 +129,7 @@ class OverlayMenu(QWidget):
         self._open_settings_callback()
 
     def refresh(self):
-        """外部から呼び出してリストを更新する"""
+        """Refresh the list from outside this widget."""
         self._refresh_list()
 
     def slide_in(self, x: int, y: int, width: int, height: int):
