@@ -9,7 +9,7 @@ from ui.theme import (
     STYLE_BUTTON, STYLE_BUTTON_TRANSPARENT,
     STYLE_INPUT, STYLE_COMBO, STYLE_CHECKBOX,
     STYLE_INPUT_ERROR,
-    STYLE_SCROLL_AREA_TRANSPARENT, STYLE_TRANSPARENT_BG,
+    STYLE_SCROLL_AREA_THIN, STYLE_TRANSPARENT_BG,
     STYLE_LABEL_SECONDARY_SMALL, STYLE_LABEL_DISABLED_SMALL,
     STYLE_LABEL_PRIMARY_SMALL, STYLE_LABEL_DANGER_SMALL,
     STYLE_CHECKBOX_DISABLED_TEXT, FONT_SIZE_LARGE
@@ -46,7 +46,7 @@ class AddProfileView(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setStyleSheet(STYLE_SCROLL_AREA_TRANSPARENT)
+        scroll.setStyleSheet(STYLE_SCROLL_AREA_THIN)
 
         inner = QWidget()
         inner.setStyleSheet(STYLE_TRANSPARENT_BG)

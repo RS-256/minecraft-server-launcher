@@ -1,3 +1,5 @@
+from pathlib import Path
+
 # ---------------------------------------------------
 
 # 背景色
@@ -45,8 +47,12 @@ COLOR_OVERLAY_MENU_BG   = "rgb(37, 37, 37)"        # メニュー背景（不透
 FONT_SIZE_DEFAULT       = 13
 FONT_SIZE_SMALL         = 11
 FONT_SIZE_LARGE         = 16
+FONT_SIZE_DEFAULT_PT    = 10
 RADIUS_DEFAULT          = 6
 MENU_WIDTH              = 220
+
+ASSETS_DIR              = Path(__file__).resolve().parent.parent / "assets"
+ICON_CHECK              = (ASSETS_DIR / "icons" / "check_white.svg").as_posix()
 
 # ---------------------------------------------------
 
@@ -193,12 +199,19 @@ STYLE_COMBO = f"""
         border: 1px solid {COLOR_BORDER};
         border-radius: {RADIUS_DEFAULT}px;
         padding: 6px;
-        font-size: {FONT_SIZE_DEFAULT}px;
+        font-size: {FONT_SIZE_DEFAULT_PT}pt;
     }}
     QComboBox QAbstractItemView {{
         background-color: {COLOR_BG_TERTIARY};
         color: {COLOR_TEXT_PRIMARY};
+        border: 1px solid {COLOR_BORDER};
+        outline: none;
+        font-size: {FONT_SIZE_DEFAULT_PT}pt;
         selection-background-color: {COLOR_ACCENT};
+    }}
+    QComboBox QAbstractItemView::item {{
+        min-height: 24px;
+        padding: 4px 8px;
     }}
 """
 
@@ -355,6 +368,7 @@ STYLE_CHECKBOX = f"""
     QCheckBox::indicator:checked {{
         background-color: {COLOR_ACCENT};
         border-color: {COLOR_ACCENT};
+        image: url("{ICON_CHECK}");
     }}
 """
 
@@ -374,6 +388,7 @@ STYLE_CHECKBOX_DANGER = f"""
     QCheckBox::indicator:checked {{
         background-color: {COLOR_DANGER};
         border-color: {COLOR_DANGER};
+        image: url("{ICON_CHECK}");
     }}
     QCheckBox::indicator:hover {{
         border-color: {COLOR_DANGER_HOVER};
@@ -468,16 +483,23 @@ STYLE_COLLAPSIBLE_HEADER = f"""
 STYLE_SCROLL_AREA_THIN = """
     QScrollArea { border: none; background: transparent; }
     QScrollBar:vertical {
-        background: rgba(255, 255, 255, 10);
-        width: 4px;
-        border-radius: 2px;
+        background: rgba(255, 255, 255, 18);
+        width: 8px;
+        border-radius: 4px;
+        margin: 2px 0px 2px 0px;
     }
     QScrollBar::handle:vertical {
-        background: rgba(255, 255, 255, 60);
-        border-radius: 2px;
+        background: rgba(255, 255, 255, 110);
+        border-radius: 4px;
+        min-height: 28px;
+    }
+    QScrollBar::handle:vertical:hover {
+        background: rgba(255, 255, 255, 155);
     }
     QScrollBar::add-line:vertical,
     QScrollBar::sub-line:vertical { height: 0px; }
+    QScrollBar::add-page:vertical,
+    QScrollBar::sub-page:vertical { background: transparent; }
 """
 
 STYLE_SCROLL_AREA_TRANSPARENT = """
