@@ -52,7 +52,7 @@ class DeleteProfileOverlay(QWidget):
         )
         card_layout.addWidget(title)
 
-        # Description
+        # Description.
         desc = QLabel(
             lang.get("ui.delete_profile.desc").format(self._profile_name)
         )
@@ -60,19 +60,19 @@ class DeleteProfileOverlay(QWidget):
         desc.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY};")
         card_layout.addWidget(desc)
 
-        # Red checkbox for deleting the directory
+        # Red checkbox for deleting the directory.
         self.delete_dir_checkbox = QCheckBox(lang.get("ui.delete_profile.delete_dir"))
         self.delete_dir_checkbox.setChecked(False)
         self.delete_dir_checkbox.setStyleSheet(STYLE_CHECKBOX_DANGER)
         card_layout.addWidget(self.delete_dir_checkbox)
 
-        # Separator
+        # Separator.
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
         sep.setStyleSheet(STYLE_SEPARATOR_BORDER)
         card_layout.addWidget(sep)
 
-        # Profile name input
+        # Profile name input.
         confirm_label = QLabel(
             lang.get("ui.delete_profile.type_name").format(self._profile_name)
         )
@@ -88,7 +88,7 @@ class DeleteProfileOverlay(QWidget):
         self.name_input.textChanged.connect(self._on_text_changed)
         card_layout.addWidget(self.name_input)
 
-        # Button row
+        # Button row.
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 

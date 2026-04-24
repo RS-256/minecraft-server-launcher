@@ -10,9 +10,9 @@ VANILLA_MANIFEST_URL = "https://launchermeta.mojang.com/mc/game/version_manifest
 class ServerDownloader(QThread):
     """Thread that downloads server jars."""
     progress  = pyqtSignal(int, int)   # (downloaded_bytes, total_bytes)
-    finished  = pyqtSignal(str)        # Saved file path
-    failed    = pyqtSignal(str)        # Error message
-    log       = pyqtSignal(str)        # Log message
+    finished  = pyqtSignal(str)        # Saved file path.
+    failed    = pyqtSignal(str)        # Error message.
+    log       = pyqtSignal(str)        # Log message.
 
     def __init__(self, profile: dict, parent=None):
         super().__init__(parent)
