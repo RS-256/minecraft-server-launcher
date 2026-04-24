@@ -5,7 +5,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPainter, QColor
 from ui.left_panel import LeftPanel
 from ui.right_panel import RightPanel
-from ui.overlay_menu import OverlayMenu
+from ui.overlays.overlay_menu import OverlayMenu
 from core.server_process import ServerProcess
 from ui.theme import (
     STYLE_WINDOW, STYLE_LABEL, STYLE_INPUT, STYLE_BUTTON,
