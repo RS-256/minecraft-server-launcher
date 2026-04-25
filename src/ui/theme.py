@@ -51,7 +51,7 @@ FONT_SIZE_DEFAULT_PT    = 10
 RADIUS_DEFAULT          = 6
 MENU_WIDTH              = 220
 
-ASSETS_DIR              = Path(__file__).resolve().parent.parent / "assets"
+ASSETS_DIR              = Path(__file__).resolve().parents[2] / "assets"
 ICON_CHECK              = (ASSETS_DIR / "icons" / "check_white.svg").as_posix()
 
 # ---------------------------------------------------
