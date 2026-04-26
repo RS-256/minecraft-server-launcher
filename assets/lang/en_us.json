@@ -41,6 +41,7 @@
     "ui.dialog.ok": "OK",
     "ui.dialog.cancel": "Cancel",
     "ui.dialog.new_profile.error.empty_name": "Please enter a profile name.",
+    "ui.dialog.new_profile.error.duplicate_name": "A profile with that name already exists.",
     "ui.add_profile.directory": "Server Directory",
     "ui.add_profile.version": "Version",
     "ui.add_profile.version.loading": "Loading...",

@@ -41,6 +41,7 @@
     "ui.dialog.ok": "OK",
     "ui.dialog.cancel": "キャンセル",
     "ui.dialog.new_profile.error.empty_name": "プロファイル名を入力してください。",
+    "ui.dialog.new_profile.error.duplicate_name": "同じ名前のプロファイルが既に存在します。",
     "ui.add_profile.directory": "サーバーディレクトリ",
     "ui.add_profile.version": "バージョン",
     "ui.add_profile.version.loading": "読み込み中...",

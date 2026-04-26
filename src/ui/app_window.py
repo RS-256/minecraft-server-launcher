@@ -213,7 +213,12 @@ class AppWindow(QMainWindow):
 
     def _on_profile_created(self, data: dict):
         from core.profile_manager import load_profiles_index, load_profile, save_profile
-        create_profile(data["name"])
+        try:
+            create_profile(data["name"])
+        except ValueError as e:
+            self.right_panel.log_display.append_log(f"[ERROR] {e}")
+            return False
+
         index = load_profiles_index()
         entry = next(
             (p for p in index["profiles"] if p["name"] == data["name"]), None
@@ -230,6 +235,7 @@ class AppWindow(QMainWindow):
         self._overlay_menu.refresh()
         self.left_panel.set_has_profile(True)
         self._on_select_profile(data["name"])
+        return True
 
     def _on_start_server(self):
         if self._server_process is not None:

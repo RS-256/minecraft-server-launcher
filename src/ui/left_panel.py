@@ -66,11 +66,9 @@ class _DeleteButton(QPushButton):
         w, h = self.width(), self.height()
 
         if self._server_running:
-            # Faded red background and text
-            p.setBrush(QColor(239, 83, 80, 40))
-            p.setPen(Qt.PenStyle.NoPen)
-            p.drawRoundedRect(0, 0, w, h, 4, 4)
-            p.setPen(QColor(239, 83, 80, 150))
+            # Disabled while the server is running.
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.setPen(QColor(204, 204, 204, 55))
         elif self._hovered:
             # Red background and white text
             p.setBrush(QColor(229, 57, 53, 255))
@@ -379,6 +377,7 @@ class LeftPanel(QWidget):
         self.basic_tab.set_values(profile)
         self.jvm_tab.set_values(profile)
         self.properties_tab.set_values(profile)
+        self._switch_tab(self.tab_stack.currentIndex())
     
     def show_add_profile(self):
         self.add_profile_view.reset()
@@ -387,8 +386,11 @@ class LeftPanel(QWidget):
     def _on_add_profile_confirm(self, data: dict):
         """Delegate the action to AppWindow."""
         if self._on_profile_created:
-            self._on_profile_created(data)
+            created = self._on_profile_created(data)
+            if created is False:
+                return
         self._show_main()
+        self._switch_tab(0)
 
     def _on_delete_profile(self):
         """Handle delete button clicks."""
@@ -470,10 +472,11 @@ class LeftPanel(QWidget):
             for btn, idx in self._tab_btns:
                 if idx is not None:
                     btn.setEnabled(True)
-                    btn.setStyleSheet(
-                        STYLE_TAB_BUTTON_INACTIVE
-                    )
+            self._switch_tab(self.tab_stack.currentIndex())
         else:
+            self._profile_name_label.set_text(lang.get("ui.profile.untitled"))
+            self._status_dot.setStyleSheet(STYLE_STATUS_DOT_OFFLINE)
+            self.set_server_running(False)
             self._content_stack.setCurrentIndex(1)  # Show placeholder
             # Gray out tab buttons
             for btn, idx in self._tab_btns:

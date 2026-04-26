@@ -20,7 +20,7 @@ from core.version_fetcher import (
     VanillaVersionFetcher, FabricVersionFetcher,
     FabricLoaderFetcher, NeoForgeVersionFetcher
 )
-from core.profile_manager import get_server_profiles_dir
+from core.profile_manager import get_server_profiles_dir, profile_name_exists
 
 BRANDS = ["vanilla", "fabric", "neoforge", "spigot", "paper"]
 FILTER_CATEGORIES = ["release", "snapshot", "beta", "alpha"]
@@ -444,6 +444,15 @@ class AddProfileView(QWidget):
                 STYLE_INPUT + STYLE_INPUT_ERROR
             )
             return
+        if profile_name_exists(name):
+            self.error_label.setText(
+                lang.get("ui.dialog.new_profile.error.duplicate_name")
+            )
+            self.name_input.setStyleSheet(
+                STYLE_INPUT + STYLE_INPUT_ERROR
+            )
+            return
+        self.name_input.setStyleSheet(STYLE_INPUT)
 
         version = self.version_combo.currentText()
         if not version or version in (

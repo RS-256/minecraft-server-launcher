@@ -104,20 +104,41 @@ def save_profile(config_path: str, profile: dict) -> None:
     _write_json(abs_path, profile)
 
 
+def profile_name_exists(name: str) -> bool:
+    """Return True if a profile with this display name already exists."""
+    index = load_profiles_index()
+    return any(p["name"] == name for p in index["profiles"])
+
+
+def _unique_profile_config_path(name: str) -> str:
+    """Return a config path that does not overwrite an existing profile file."""
+    safe_name = _to_safe_filename(name)
+    candidate = f"config/profiles/{safe_name}.json"
+    abs_candidate = os.path.join(get_base_dir(), candidate)
+    suffix = 2
+    while os.path.exists(abs_candidate):
+        candidate = f"config/profiles/{safe_name}_{suffix}.json"
+        abs_candidate = os.path.join(get_base_dir(), candidate)
+        suffix += 1
+    return candidate
+
+
 def create_profile(name: str) -> str:
     """
     Create a new profile and return its config_path.
     Also append it to profiles.json.
     """
-    safe_name = _to_safe_filename(name)
-    config_path = f"config/profiles/{safe_name}.json"
+    index = load_profiles_index()
+    if any(p["name"] == name for p in index["profiles"]):
+        raise ValueError(f'Profile "{name}" already exists.')
+
+    config_path = _unique_profile_config_path(name)
     abs_path = os.path.join(get_base_dir(), config_path)
 
     profile = PROFILE_DEFAULTS.copy()
     profile["name"] = name
     _write_json(abs_path, profile)
 
-    index = load_profiles_index()
     index["profiles"].append({
         "name": name,
         "config_path": config_path
