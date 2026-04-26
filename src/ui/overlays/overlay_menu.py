@@ -23,6 +23,7 @@ class OverlayMenu(QWidget):
         self._open_settings_callback  = open_settings_callback
         self._select_profile_callback = select_profile_callback
         self._add_profile_callback    = add_profile_callback
+        self._current_profile_name    = ""
         self._anim = None
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
         self._build()
@@ -91,10 +92,12 @@ class OverlayMenu(QWidget):
 
         profiles = get_all_profiles()
         for profile in profiles:
+            name = profile.get("name", "")
             list_layout.addWidget(self._make_separator())
             item = ProfileListItem(
                 profile=profile,
-                running=profile.get("_running", False)
+                running=profile.get("_running", False),
+                selected=name == self._current_profile_name
             )
             item.clicked.connect(self._on_profile_clicked)
             list_layout.addWidget(item)
@@ -130,6 +133,13 @@ class OverlayMenu(QWidget):
 
     def refresh(self):
         """Refresh the list from outside this widget."""
+        self._refresh_list()
+
+    def set_current_profile_name(self, name: str):
+        """Update which profile is visually marked as current."""
+        if self._current_profile_name == name:
+            return
+        self._current_profile_name = name
         self._refresh_list()
 
     def slide_in(self, x: int, y: int, width: int, height: int):

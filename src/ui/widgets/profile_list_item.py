@@ -33,24 +33,24 @@ class ProfileIcon(QWidget):
 
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(bg)
-        p.drawRoundedRect(0, 0, 36, 36, 6, 6)
+        p.drawRoundedRect(2, 2, 36, 36, 6, 6)
 
         font = QFont()
         font.setPointSize(13)
         font.setBold(True)
         p.setFont(font)
         p.setPen(QColor(255, 255, 255, 220))
-        p.drawText(0, 0, 36, 36, Qt.AlignmentFlag.AlignCenter, self.brand[0].upper())
+        p.drawText(2, 2, 36, 36, Qt.AlignmentFlag.AlignCenter, self.brand[0].upper())
 
         dot_color = QColor(76, 175, 80, 255) if self.running else QColor(80, 80, 80, 255)
         p.setPen(QColor(37, 37, 37, 255))
         p.setBrush(dot_color)
-        p.drawEllipse(24, 24, 12, 12)
+        p.drawEllipse(26, 26, 12, 12)
 
 
 class ScrollingLabel(QWidget):
     """Scroll overflowing text at a constant speed on hover, then loop."""
-    def __init__(self, text: str, style: str = "", parent=None):
+    def __init__(self, text: str, style: str = "", label_height: int = 20, parent=None):
         super().__init__(parent)
         self._text = text
         self._scrolling = False
@@ -82,7 +82,7 @@ class ScrollingLabel(QWidget):
 
         self._label = QLabel(text)
         self._label.setStyleSheet(style + " " + STYLE_TRANSPARENT_BG)
-        self._label.setFixedHeight(20)
+        self._label.setFixedHeight(label_height)
         self._label.adjustSize()
         self._scroll.setWidget(self._label)
 
@@ -147,10 +147,17 @@ class ScrollingLabel(QWidget):
 class ProfileListItem(QWidget):
     clicked = pyqtSignal(str)
 
-    def __init__(self, profile: dict, running: bool = False, parent=None):
+    def __init__(
+        self,
+        profile: dict,
+        running: bool = False,
+        selected: bool = False,
+        parent=None
+    ):
         super().__init__(parent)
         self._profile = profile
         self._running = running
+        self._selected = selected
         self._hovered = False
         self.setMouseTracking(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -165,7 +172,7 @@ class ProfileListItem(QWidget):
         # Icon
         brand = self._profile.get("brand", "vanilla")
         icon = ProfileIcon(brand, self._running)
-        layout.addWidget(icon)
+        layout.addWidget(icon, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         # Text area
         text_widget = QWidget()
@@ -185,6 +192,7 @@ class ProfileListItem(QWidget):
         # Bottom row: dir plus brand/version side by side
         bottom_widget = QWidget()
         bottom_widget.setStyleSheet(STYLE_TRANSPARENT_BG)
+        bottom_widget.setFixedHeight(16)
         bottom_layout = QHBoxLayout(bottom_widget)
         bottom_layout.setContentsMargins(0, 0, 0, 0)
         bottom_layout.setSpacing(6)
@@ -194,12 +202,15 @@ class ProfileListItem(QWidget):
               else lang.get("ui.menu.profile.no_dir")
         dir_label = ScrollingLabel(
             f"{lang.get('ui.menu.profile.dir')} {dir_text}",
-            f"font-size: 11px; color: {COLOR_TEXT_MUTED};"
+            f"font-size: 11px; color: {COLOR_TEXT_MUTED};",
+            label_height=16
         )
         dir_label.setFixedHeight(16)
 
         brand_ver = f"{self._profile.get('brand', 'vanilla')} {self._profile.get('version', '')}"
         brand_label = QLabel(brand_ver)
+        brand_label.setFixedHeight(16)
+        brand_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         brand_label.setStyleSheet(
             f"font-size: 11px; color: {COLOR_TEXT_MUTED}; {STYLE_TRANSPARENT_BG}"
         )
@@ -221,6 +232,12 @@ class ProfileListItem(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if self._selected:
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(31, 106, 165, 56))
+            p.drawRoundedRect(self.rect().adjusted(4, 8, -4, -8), 6, 6)
+            p.setBrush(QColor(31, 106, 165, 255))
+            p.drawRoundedRect(3, 16, 2, self.height() - 32, 1, 1)
         if self._hovered:
             p.fillRect(self.rect(), QColor(255, 255, 255, 15))
 

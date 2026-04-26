@@ -145,6 +145,8 @@ class AppWindow(QMainWindow):
         """Apply a profile to the UI."""
         self._current_profile = profile
         self.left_panel.apply_profile(profile)
+        if hasattr(self, "_overlay_menu"):
+            self._overlay_menu.set_current_profile_name(profile.get("name", ""))
 
     def _on_select_profile(self, name: str):
         """Handle selecting a profile from the profile list."""
@@ -169,6 +171,10 @@ class AppWindow(QMainWindow):
         central = self.centralWidget()
         h = central.height()
         w = central.width()
+        if self._current_profile:
+            self._overlay_menu.set_current_profile_name(
+                self._current_profile.get("name", "")
+            )
 
         self._bg_dim.setGeometry(0, 0, w, h)
         self._bg_dim.show()
@@ -329,8 +335,10 @@ class AppWindow(QMainWindow):
         else:
             self.left_panel.set_has_profile(False)
             self._current_profile = None
+            self._overlay_menu.set_current_profile_name("")
 
     def _handle_profile_renamed(self, old_name: str, new_name: str):
-        self._overlay_menu.refresh()
         if self._current_profile and self._current_profile.get("name") == old_name:
             self._current_profile["name"] = new_name
+            self._overlay_menu.set_current_profile_name(new_name)
+        self._overlay_menu.refresh()

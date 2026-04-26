@@ -3,7 +3,11 @@
     {
       "name": "s",
       "config_path": "config/profiles/s.json"
+    },
+    {
+      "name": "t",
+      "config_path": "config/profiles/t.json"
     }
   ],
-  "last_used": "s"
+  "last_used": "t"
 }

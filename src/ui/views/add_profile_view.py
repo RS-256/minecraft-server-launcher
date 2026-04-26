@@ -2,12 +2,11 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton,
     QComboBox, QCheckBox, QScrollArea,
-    QFileDialog
+    QFileDialog, QGridLayout
 )
 from PyQt6.QtCore import Qt
 from ui.theme import (
-    STYLE_BUTTON, STYLE_BUTTON_TRANSPARENT,
-    STYLE_INPUT, STYLE_COMBO, STYLE_CHECKBOX,
+    STYLE_BUTTON, STYLE_INPUT, STYLE_COMBO, STYLE_CHECKBOX,
     STYLE_INPUT_ERROR,
     STYLE_SCROLL_AREA_THIN, STYLE_TRANSPARENT_BG,
     STYLE_LABEL_SECONDARY_SMALL, STYLE_LABEL_DISABLED_SMALL,
@@ -59,7 +58,7 @@ class AddProfileView(QWidget):
         # Back button
         back_btn = QPushButton(lang.get("ui.settings.back"))
         back_btn.setFixedWidth(100)
-        back_btn.setStyleSheet(STYLE_BUTTON_TRANSPARENT)
+        back_btn.setStyleSheet(STYLE_BUTTON)
         back_btn.clicked.connect(self._on_back)
         layout.addWidget(back_btn)
 
@@ -93,52 +92,38 @@ class AddProfileView(QWidget):
         dir_row.addWidget(browse_btn)
         layout.addLayout(dir_row)
 
-        # Brand and Minecraft version side by side
-        brand_ver_row = QHBoxLayout()
-        brand_ver_row.setSpacing(8)
+        # Brand on the left and Minecraft version on the right
+        self._version_grid = QGridLayout()
+        self._version_grid.setSpacing(6)
+        self._version_grid.setColumnStretch(0, 2)
+        self._version_grid.setColumnStretch(1, 3)
 
-        brand_col = QVBoxLayout()
-        brand_col.setSpacing(4)
-        brand_col.addWidget(QLabel(lang.get("ui.dialog.new_profile.brand")))
+        self._version_grid.addWidget(QLabel(lang.get("ui.dialog.new_profile.brand")), 0, 0)
+        self._version_grid.addWidget(QLabel(lang.get("ui.add_profile.version")), 0, 1)
+
         self.brand_combo = QComboBox()
         self.brand_combo.setStyleSheet(STYLE_COMBO)
         for b in BRANDS:
             self.brand_combo.addItem(b)
         self.brand_combo.currentTextChanged.connect(self._on_brand_changed)
-        brand_col.addWidget(self.brand_combo)
-        brand_ver_row.addLayout(brand_col, stretch=2)
+        self._version_grid.addWidget(self.brand_combo, 1, 0)
 
-        ver_col = QVBoxLayout()
-        ver_col.setSpacing(4)
-        ver_col.addWidget(QLabel(lang.get("ui.add_profile.version")))
         self.version_combo = QComboBox()
         self.version_combo.setStyleSheet(STYLE_COMBO)
         self.version_combo.addItem(lang.get("ui.add_profile.version.loading"))
         self.version_combo.setEnabled(False)
         self.version_combo.currentTextChanged.connect(self._on_mc_version_changed)
-        ver_col.addWidget(self.version_combo)
-        brand_ver_row.addLayout(ver_col, stretch=3)
+        self._version_grid.addWidget(self.version_combo, 1, 1)
 
-        layout.addLayout(brand_ver_row)
-
-        # Loader version, placed below the Minecraft version
-        self._loader_widget = QWidget()
-        self._loader_widget.setStyleSheet(STYLE_TRANSPARENT_BG)
-        loader_row = QHBoxLayout(self._loader_widget)
-        loader_row.setContentsMargins(0, 0, 0, 0)
-        loader_row.setSpacing(8)
-        loader_row.addStretch(2)  # Space matching the brand column width
-
-        loader_col = QVBoxLayout()
-        loader_col.setSpacing(4)
         self._loader_label = QLabel(lang.get("ui.add_profile.loader_version"))
-        loader_col.addWidget(self._loader_label)
+        self._version_grid.addWidget(self._loader_label, 2, 1)
+
         self.loader_combo = QComboBox()
         self.loader_combo.setStyleSheet(STYLE_COMBO)
         self.loader_combo.setEnabled(False)
-        loader_col.addWidget(self.loader_combo)
-        loader_row.addLayout(loader_col, stretch=3)
-        layout.addWidget(self._loader_widget)
+        self._version_grid.addWidget(self.loader_combo, 3, 1)
+
+        layout.addLayout(self._version_grid)
 
         # Collapsible advanced settings
         self._advanced = CollapsibleSection(
@@ -263,7 +248,9 @@ class AddProfileView(QWidget):
         self.loader_combo.setEnabled(False)
 
     def _refresh_loader_visibility(self):
-        self._loader_widget.setVisible(self.brand_combo.currentText() != "vanilla")
+        visible = self.brand_combo.currentText() != "vanilla"
+        self._loader_label.setVisible(visible)
+        self.loader_combo.setVisible(visible)
 
     def _on_brand_changed(self, brand: str):
         self._refresh_loader_visibility()

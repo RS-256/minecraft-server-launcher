@@ -5,3 +5,4 @@ main.spec
 
 profiles/
 config.json
+config/profiles.json

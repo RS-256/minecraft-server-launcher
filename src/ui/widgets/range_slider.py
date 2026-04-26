@@ -15,16 +15,39 @@ class RangeSlider(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.min_val   = 512
-        self.max_val   = get_max_ram_mb() / 2 + self.min_val
+        self.max_val   = get_max_ram_mb() // 2 + self.min_val
         self.step      = 512
-        self.low       = 2048
-        self.high      = 4096
+        self._point_a  = 2048
+        self._point_b  = 4096
         self._enabled  = True
         self._dragging = None
         self.setMinimumHeight(56)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setMouseTracking(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    @property
+    def low(self) -> int:
+        return min(self._point_a, self._point_b)
+
+    @low.setter
+    def low(self, value: int):
+        self._point_a = self._clamp_value(value)
+        self._point_b = self.high
+
+    @property
+    def high(self) -> int:
+        return max(self._point_a, self._point_b)
+
+    @high.setter
+    def high(self, value: int):
+        self._point_a = self.low
+        self._point_b = self._clamp_value(value)
+
+    def _clamp_value(self, value: int) -> int:
+        value = max(self.min_val, min(int(value), self.max_val))
+        steps = round((value - self.min_val) / self.step)
+        return self.min_val + steps * self.step
 
     def setEnabled(self, enabled: bool):
         self._enabled = enabled
@@ -78,7 +101,7 @@ class RangeSlider(QWidget):
             p.setBrush(QBrush(accent_color))
             p.drawRoundedRect(x_low, y - 3, x_high - x_low, 6, 3, 3)
 
-        for x in [x_low, x_high]:
+        for x in [self._val_to_x(self._point_a), self._val_to_x(self._point_b)]:
             p.setBrush(QBrush(handle_color))
             p.setPen(QPen(accent_color, 2))
             p.drawEllipse(QPoint(x, y), 9, 9)
@@ -94,21 +117,21 @@ class RangeSlider(QWidget):
         if not self._enabled:
             return
         x = event.position().x()
-        x_low  = self._val_to_x(self.low)
-        x_high = self._val_to_x(self.high)
-        if abs(x - x_high) <= abs(x - x_low):
-            self._dragging = "high"
+        x_a = self._val_to_x(self._point_a)
+        x_b = self._val_to_x(self._point_b)
+        if abs(x - x_b) <= abs(x - x_a):
+            self._dragging = "b"
         else:
-            self._dragging = "low"
+            self._dragging = "a"
 
     def mouseMoveEvent(self, event):
         if not self._enabled or not self._dragging:
             return
         val = self._x_to_val(event.position().x())
-        if self._dragging == "low":
-            self.low = max(self.min_val, min(val, self.high))
+        if self._dragging == "a":
+            self._point_a = val
         else:
-            self.high = min(self.max_val, max(val, self.low))
+            self._point_b = val
         self.update()
 
     def mouseReleaseEvent(self, event):
