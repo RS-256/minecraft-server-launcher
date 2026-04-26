@@ -94,5 +94,6 @@
     "ui.properties.saved": "保存しました。",
     "ui.properties.save_failed": "保存に失敗しました: {0}",
     "ui.properties.section.priority": "主要設定",
-    "ui.properties.section.other": "その他の設定"
+    "ui.properties.section.other": "その他の設定",
+    "ui.properties.search.placeholder": "設定を検索..."
 }

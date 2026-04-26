@@ -53,6 +53,9 @@ MENU_WIDTH              = 220
 
 ASSETS_DIR              = Path(__file__).resolve().parents[2] / "assets"
 ICON_CHECK              = (ASSETS_DIR / "icons" / "check_white.svg").as_posix()
+ICON_CHEVRON_DOWN      = (ASSETS_DIR / "icons" / "chevron_down.svg").as_posix()
+
+BROWSE_BUTTON_WIDTH    = 88
 
 # ---------------------------------------------------
 
@@ -198,8 +201,24 @@ STYLE_COMBO = f"""
         color: {COLOR_TEXT_PRIMARY};
         border: 1px solid {COLOR_BORDER};
         border-radius: {RADIUS_DEFAULT}px;
-        padding: 6px;
+        padding: 6px 30px 6px 8px;
         font-size: {FONT_SIZE_DEFAULT_PT}pt;
+    }}
+    QComboBox::drop-down {{
+        subcontrol-origin: padding;
+        subcontrol-position: top right;
+        width: 28px;
+        border: none;
+        background: transparent;
+    }}
+    QComboBox::down-arrow {{
+        image: url("{ICON_CHEVRON_DOWN}");
+        width: 12px;
+        height: 12px;
+    }}
+    QComboBox:disabled {{
+        background-color: {COLOR_BG_SECONDARY};
+        color: {COLOR_TEXT_DIM};
     }}
     QComboBox QAbstractItemView {{
         background-color: {COLOR_BG_TERTIARY};

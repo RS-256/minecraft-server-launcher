@@ -99,5 +99,6 @@
     "ui.properties.saved": "Saved.",
     "ui.properties.save_failed": "Save failed: {0}",
     "ui.properties.section.priority": "Common Settings",
-    "ui.properties.section.other": "Other Settings"
+    "ui.properties.section.other": "Other Settings",
+    "ui.properties.search.placeholder": "Search settings..."
 }

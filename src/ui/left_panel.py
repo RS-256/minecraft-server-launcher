@@ -107,7 +107,8 @@ class _RenameLabel(QWidget):
 
         self._label = QLabel(self._text)
         self._label.setStyleSheet(f"font-size: 12px; {STYLE_TRANSPARENT_BG}")
-        self._label.setCursor(Qt.CursorShape.IBeamCursor)
+        self._label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self._input = QLineEdit(self._text)
         self._input.setStyleSheet(STYLE_RENAME_INPUT)
@@ -125,6 +126,13 @@ class _RenameLabel(QWidget):
 
     def set_server_running(self, running: bool):
         self._server_running = running
+        cursor = (
+            Qt.CursorShape.ArrowCursor
+            if running else
+            Qt.CursorShape.PointingHandCursor
+        )
+        self._label.setCursor(cursor)
+        self.setCursor(cursor)
         if running and self._editing:
             self._cancel_edit()
 

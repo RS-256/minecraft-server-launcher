@@ -13,7 +13,7 @@ from ui.theme import (
     STYLE_TRANSPARENT_BG, STYLE_BOTTOM_ACTION_BAR,
     STYLE_SEPARATOR, STYLE_LABEL_SECONDARY_SMALL,
     STYLE_LABEL_DISABLED_SMALL, STYLE_LABEL_PRIMARY_SMALL,
-    STYLE_CHECKBOX_DISABLED_TEXT
+    STYLE_CHECKBOX_DISABLED_TEXT, BROWSE_BUTTON_WIDTH
 )
 from ui.widgets.collapsible_section import CollapsibleSection
 from core.lang import lang
@@ -88,7 +88,7 @@ class BasicTab(QWidget):
         self.dir_entry.setPlaceholderText(lang.get("ui.left.server_directory"))
         self.dir_entry.editingFinished.connect(self._on_dir_changed)
         browse_btn = QPushButton(lang.get("ui.left.browse"))
-        browse_btn.setFixedWidth(70)
+        browse_btn.setFixedWidth(BROWSE_BUTTON_WIDTH)
         browse_btn.setStyleSheet(STYLE_BUTTON)
         browse_btn.clicked.connect(self._browse_dir)
         dir_row.addWidget(self.dir_entry)
@@ -205,7 +205,7 @@ class BasicTab(QWidget):
         self.java_entry.setEnabled(False)
         self.java_entry.editingFinished.connect(self._on_java_path_changed)
         java_browse_btn = QPushButton(lang.get("ui.left.browse"))
-        java_browse_btn.setFixedWidth(70)
+        java_browse_btn.setFixedWidth(BROWSE_BUTTON_WIDTH)
         java_browse_btn.setStyleSheet(STYLE_BUTTON)
         java_browse_btn.clicked.connect(self._browse_java)
         self._java_browse_btn = java_browse_btn
@@ -245,7 +245,7 @@ class BasicTab(QWidget):
         self.jar_entry.setStyleSheet(self._jar_style(enabled=False))
         self.jar_entry.editingFinished.connect(self._on_jar_path_changed)
         self.jar_browse_btn = QPushButton(lang.get("ui.jvm.jar_path.browse"))
-        self.jar_browse_btn.setFixedWidth(70)
+        self.jar_browse_btn.setFixedWidth(BROWSE_BUTTON_WIDTH)
         self.jar_browse_btn.setStyleSheet(STYLE_BUTTON)
         self.jar_browse_btn.setEnabled(False)
         self.jar_browse_btn.clicked.connect(self._browse_jar)
@@ -317,6 +317,9 @@ class BasicTab(QWidget):
     def _refresh_loader_visibility(self):
         brand = self.brand_combo.currentText()
         needs_loader = brand not in ("vanilla", "spigot", "paper")
+        visible = brand != "vanilla"
+        self._loader_ver_label.setVisible(visible)
+        self.loader_combo.setVisible(visible)
         self.loader_combo.setEnabled(needs_loader)
         self._loader_ver_label.setStyleSheet(
             STYLE_LABEL_PRIMARY_SMALL if needs_loader

@@ -1,4 +1,5 @@
 import os
+from html import escape
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
     QLabel, QLineEdit, QPushButton, QCheckBox,
@@ -24,12 +25,30 @@ from core.properties_parser import (
 )
 
 
+PROPERTY_LABEL_WIDTH = 180
+PROPERTY_VALUE_MIN_WIDTH = 160
+PROPERTY_VALUE_MAX_WIDTH = 240
+PROPERTY_SCROLL_RIGHT_PADDING = 18
+PROPERTY_HIGHLIGHT_STYLE = "background-color: #dfff3f; color: #111111;"
+
+
+class _NoWheelComboBox(QComboBox):
+    """Combo box that ignores mouse-wheel changes while closed."""
+
+    def wheelEvent(self, event):
+        if self.view().isVisible():
+            super().wheelEvent(event)
+        else:
+            event.ignore()
+
+
 class _PropRow(QWidget):
     """Row widget for one property."""
     def __init__(self, key: str, value: str, parent=None):
         super().__init__(parent)
         self._key  = key
         self._meta = get_property_meta(key)
+        self._key_label: QLabel | None = None
         self._build(value)
 
     def _build(self, value: str):
@@ -42,13 +61,26 @@ class _PropRow(QWidget):
         key_label.setStyleSheet(
             STYLE_LABEL_SECONDARY_SMALL
         )
-        key_label.setFixedWidth(220)
+        key_label.setFixedWidth(PROPERTY_LABEL_WIDTH)
         key_label.setToolTip(self._key)
+        key_label.setTextFormat(Qt.TextFormat.RichText)
+        self._key_label = key_label
         layout.addWidget(key_label)
 
         # Value widget
         self._widget = self._make_widget(value)
-        layout.addWidget(self._widget, stretch=1)
+        self._apply_value_widget_layout(self._widget)
+        layout.addStretch(1)
+        layout.addWidget(self._widget, 0, Qt.AlignmentFlag.AlignRight)
+
+    def _apply_value_widget_layout(self, widget: QWidget):
+        if isinstance(widget, (QLineEdit, QComboBox)):
+            widget.setMinimumWidth(PROPERTY_VALUE_MIN_WIDTH)
+            widget.setMaximumWidth(PROPERTY_VALUE_MAX_WIDTH)
+            widget.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed
+            )
 
     def _make_widget(self, value: str) -> QWidget:
         t = self._meta["type"]
@@ -59,7 +91,7 @@ class _PropRow(QWidget):
             return toggle
 
         elif t == "combo":
-            combo = QComboBox()
+            combo = _NoWheelComboBox()
             combo.setStyleSheet(STYLE_COMBO)
             for c in self._meta.get("choices", []):
                 combo.addItem(c)
@@ -82,6 +114,35 @@ class _PropRow(QWidget):
             entry.setPlaceholderText(str(self._meta.get("default", "")))
             return entry
 
+    def set_search_query(self, query: str):
+        if self._key_label is None:
+            return
+
+        if not query:
+            self._key_label.setText(escape(self._key))
+            return
+
+        key_lower = self._key.lower()
+        query_lower = query.lower()
+        query_len = len(query)
+        parts = []
+        pos = 0
+
+        while True:
+            idx = key_lower.find(query_lower, pos)
+            if idx < 0:
+                parts.append(escape(self._key[pos:]))
+                break
+
+            parts.append(escape(self._key[pos:idx]))
+            matched = escape(self._key[idx:idx + query_len])
+            parts.append(
+                f'<span style="{PROPERTY_HIGHLIGHT_STYLE}">{matched}</span>'
+            )
+            pos = idx + query_len
+
+        self._key_label.setText("".join(parts))
+
     def get_value(self) -> str:
         """Return the current value as a string."""
         t = self._meta["type"]
@@ -99,6 +160,7 @@ class PropertiesTab(QWidget):
         self._current_profile: dict = {}
         self._prop_rows: dict[str, _PropRow] = {}
         self._custom_mode = False
+        self._search_text = ""
         self._build()
 
     def _build(self):
@@ -154,6 +216,20 @@ class PropertiesTab(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        search_row = QWidget()
+        search_layout = QHBoxLayout(search_row)
+        search_layout.setContentsMargins(12, 12, 12, 6)
+        search_layout.setSpacing(0)
+
+        self._search_entry = QLineEdit()
+        self._search_entry.setStyleSheet(STYLE_INPUT)
+        self._search_entry.setPlaceholderText(
+            lang.get("ui.properties.search.placeholder")
+        )
+        self._search_entry.textChanged.connect(self._on_search_changed)
+        search_layout.addWidget(self._search_entry)
+        layout.addWidget(search_row)
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -162,7 +238,9 @@ class PropertiesTab(QWidget):
         self._scroll_inner = QWidget()
         self._scroll_inner.setStyleSheet(STYLE_TRANSPARENT_BG)
         self._inner_layout = QVBoxLayout(self._scroll_inner)
-        self._inner_layout.setContentsMargins(12, 12, 12, 12)
+        self._inner_layout.setContentsMargins(
+            12, 12, PROPERTY_SCROLL_RIGHT_PADDING, 12
+        )
         self._inner_layout.setSpacing(4)
         self._inner_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
@@ -242,6 +320,7 @@ class PropertiesTab(QWidget):
             self._add_section_label(lang.get("ui.properties.section.priority"))
             for key in priority_shown:
                 row = _PropRow(key, props[key])
+                row.set_search_query(self._search_text)
                 self._prop_rows[key] = row
                 self._inner_layout.addWidget(row)
             self._inner_layout.addWidget(self._make_separator())
@@ -252,6 +331,7 @@ class PropertiesTab(QWidget):
             self._add_section_label(lang.get("ui.properties.section.other"))
             for key in sorted(other_keys):
                 row = _PropRow(key, props[key])
+                row.set_search_query(self._search_text)
                 self._prop_rows[key] = row
                 self._inner_layout.addWidget(row)
 
@@ -288,6 +368,11 @@ class PropertiesTab(QWidget):
 
     def _on_reload(self):
         self.load_properties(self._current_profile)
+
+    def _on_search_changed(self, text: str):
+        self._search_text = text.strip()
+        for row in self._prop_rows.values():
+            row.set_search_query(self._search_text)
 
     def _on_save(self):
         path = self._get_properties_path()

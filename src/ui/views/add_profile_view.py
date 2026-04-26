@@ -12,7 +12,8 @@ from ui.theme import (
     STYLE_SCROLL_AREA_THIN, STYLE_TRANSPARENT_BG,
     STYLE_LABEL_SECONDARY_SMALL, STYLE_LABEL_DISABLED_SMALL,
     STYLE_LABEL_PRIMARY_SMALL, STYLE_LABEL_DANGER_SMALL,
-    STYLE_CHECKBOX_DISABLED_TEXT, FONT_SIZE_LARGE
+    STYLE_CHECKBOX_DISABLED_TEXT, FONT_SIZE_LARGE,
+    BROWSE_BUTTON_WIDTH
 )
 from ui.widgets.collapsible_section import CollapsibleSection
 from core.lang import lang
@@ -85,7 +86,7 @@ class AddProfileView(QWidget):
         self.dir_input.setStyleSheet(STYLE_INPUT)
         self.dir_input.setPlaceholderText(lang.get("ui.add_profile.directory"))
         browse_btn = QPushButton(lang.get("ui.left.browse"))
-        browse_btn.setFixedWidth(70)
+        browse_btn.setFixedWidth(BROWSE_BUTTON_WIDTH)
         browse_btn.setStyleSheet(STYLE_BUTTON)
         browse_btn.clicked.connect(self._browse_dir)
         dir_row.addWidget(self.dir_input)
@@ -121,7 +122,10 @@ class AddProfileView(QWidget):
         layout.addLayout(brand_ver_row)
 
         # Loader version, placed below the Minecraft version
-        loader_row = QHBoxLayout()
+        self._loader_widget = QWidget()
+        self._loader_widget.setStyleSheet(STYLE_TRANSPARENT_BG)
+        loader_row = QHBoxLayout(self._loader_widget)
+        loader_row.setContentsMargins(0, 0, 0, 0)
         loader_row.setSpacing(8)
         loader_row.addStretch(2)  # Space matching the brand column width
 
@@ -134,7 +138,7 @@ class AddProfileView(QWidget):
         self.loader_combo.setEnabled(False)
         loader_col.addWidget(self.loader_combo)
         loader_row.addLayout(loader_col, stretch=3)
-        layout.addLayout(loader_row)
+        layout.addWidget(self._loader_widget)
 
         # Collapsible advanced settings
         self._advanced = CollapsibleSection(
@@ -183,7 +187,7 @@ class AddProfileView(QWidget):
             lang.get("ui.add_profile.java_path.placeholder")
         )
         java_browse_btn = QPushButton(lang.get("ui.left.browse"))
-        java_browse_btn.setFixedWidth(70)
+        java_browse_btn.setFixedWidth(BROWSE_BUTTON_WIDTH)
         java_browse_btn.setStyleSheet(STYLE_BUTTON)
         java_browse_btn.clicked.connect(self._browse_java)
         java_row.addWidget(self.java_input)
@@ -209,6 +213,7 @@ class AddProfileView(QWidget):
 
         scroll.setWidget(inner)
         outer.addWidget(scroll)
+        self._refresh_loader_visibility()
 
     def reset(self):
         self.name_input.clear()
@@ -257,7 +262,11 @@ class AddProfileView(QWidget):
         self.loader_combo.clear()
         self.loader_combo.setEnabled(False)
 
+    def _refresh_loader_visibility(self):
+        self._loader_widget.setVisible(self.brand_combo.currentText() != "vanilla")
+
     def _on_brand_changed(self, brand: str):
+        self._refresh_loader_visibility()
         is_vanilla = brand == "vanilla"
         self._loader_label.setStyleSheet(
             STYLE_LABEL_DISABLED_SMALL if is_vanilla
