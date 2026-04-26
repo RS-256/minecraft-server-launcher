@@ -67,7 +67,12 @@ class _DeleteButton(QPushButton):
 
         if self._server_running:
             # Disabled while the server is running.
-            p.setBrush(Qt.BrushStyle.NoBrush)
+            if self._hovered:
+                p.setBrush(QColor(239, 83, 80, 40))
+                p.setPen(Qt.PenStyle.NoPen)
+                p.drawRoundedRect(0, 0, w, h, 4, 4)
+            else:
+                p.setBrush(Qt.BrushStyle.NoBrush)
             p.setPen(QColor(204, 204, 204, 55))
         elif self._hovered:
             # Red background and white text

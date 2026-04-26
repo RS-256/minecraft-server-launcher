@@ -476,27 +476,38 @@ class BasicTab(QWidget):
 
     def _on_dir_changed(self):
         path = self.dir_entry.text().strip()
-        self._save_field(server_dir=path)
+        self._save_field(server_dir=path, eula_agreed=False)
         self._check_eula_file(path)
 
     def _on_eula_toggled(self, checked: bool):
         self._refresh_start_btn()
         if not checked:
+            self._save_field(eula_agreed=False)
             return
         server_dir = self.dir_entry.text().strip()
         if not server_dir:
             self._log("[WARN] Server directory is not set.")
+            self.eula_checkbox.blockSignals(True)
+            self.eula_checkbox.setChecked(False)
+            self.eula_checkbox.blockSignals(False)
+            self._refresh_start_btn()
             return
-        self._write_eula(server_dir)
+        if self._write_eula(server_dir):
+            self._save_field(eula_agreed=True)
+        else:
+            self.eula_checkbox.blockSignals(True)
+            self.eula_checkbox.setChecked(False)
+            self.eula_checkbox.blockSignals(False)
+            self._refresh_start_btn()
 
     def _check_eula_file(self, server_dir: str):
-        agreed = check_eula(server_dir)
+        agreed = self._current_profile.get("eula_agreed", False) and check_eula(server_dir)
         self.eula_checkbox.blockSignals(True)
         self.eula_checkbox.setChecked(agreed)
         self.eula_checkbox.blockSignals(False)
         self._refresh_start_btn()
 
-    def _write_eula(self, server_dir: str):
+    def _write_eula(self, server_dir: str) -> bool:
         eula_path = os.path.join(server_dir, "eula.txt")
         try:
             with open(eula_path, "w", encoding="utf-8") as f:
@@ -504,8 +515,10 @@ class BasicTab(QWidget):
                 f.write(f"# {lang.get('ui.basic.eula.url')}\n")
                 f.write("eula=true\n")
             self._log(f"[INFO] EULA accepted: {eula_path}")
+            return True
         except Exception as e:
             self._log(f"[ERROR] Failed to write eula.txt: {e}")
+            return False
 
     def _save_field(self, **kwargs):
         name = self._current_profile.get("name", "")
@@ -529,10 +542,8 @@ class BasicTab(QWidget):
         )
         if path:
             self.dir_entry.setText(path)
-            self._save_field(server_dir=path)
+            self._save_field(server_dir=path, eula_agreed=False)
             self._check_eula_file(path)
-            if self.eula_checkbox.isChecked():
-                self._write_eula(path)
 
     def _browse_java(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -676,6 +687,7 @@ class BasicTab(QWidget):
             "brand":          self.brand_combo.currentText(),
             "version":        self.version_combo.currentText(),
             "loader_version": self.loader_combo.currentText(),
+            "eula_agreed":    self.eula_checkbox.isChecked(),
             "custom_jar":     self.custom_jar_checkbox.isChecked(),
             "jar_path":       self.jar_entry.text().strip(),
             "custom_java":    self.custom_java_checkbox.isChecked(),
