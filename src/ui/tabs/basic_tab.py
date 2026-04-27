@@ -1,14 +1,15 @@
 import os
+import time
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton,
     QCheckBox, QFrame, QFileDialog,
-    QMessageBox, QComboBox, QScrollArea
+    QComboBox, QScrollArea
 )
 from PyQt6.QtCore import Qt
 from ui.theme import (
     STYLE_BUTTON, STYLE_BUTTON_SUCCESS, STYLE_BUTTON_DANGER,
-    STYLE_INPUT, STYLE_CHECKBOX, STYLE_COMBO,
+    STYLE_BUTTON_DARK, STYLE_INPUT, STYLE_CHECKBOX, STYLE_COMBO,
     STYLE_INPUT_DISABLED, STYLE_SCROLL_AREA_THIN,
     STYLE_TRANSPARENT_BG, STYLE_BOTTOM_ACTION_BAR,
     STYLE_SEPARATOR, STYLE_LABEL_SECONDARY_SMALL,
@@ -16,6 +17,7 @@ from ui.theme import (
     STYLE_CHECKBOX_DISABLED_TEXT, BROWSE_BUTTON_WIDTH
 )
 from ui.widgets.collapsible_section import CollapsibleSection
+from ui.overlays.download_confirm_overlay import DownloadConfirmOverlay
 from core.lang import lang
 from core.profile_manager import get_server_profiles_dir
 from core.downloader import ServerDownloader
@@ -49,6 +51,9 @@ class BasicTab(QWidget):
         self._fetcher = None
         self._loader_fetcher = None
         self._active_threads: list = []
+        self._download_overlay = None
+        self._last_progress_log_time = 0.0
+        self._last_progress_logged_pct = -1
         self._build()
 
     def set_log_callback(self, callback):
@@ -104,7 +109,22 @@ class BasicTab(QWidget):
         grid.setColumnStretch(1, 3)
 
         grid.addWidget(QLabel(lang.get("ui.basic.brand")), 0, 0)
-        grid.addWidget(QLabel(lang.get("ui.basic.version")), 0, 1)
+
+        version_label_row = QWidget()
+        version_label_row.setStyleSheet(STYLE_TRANSPARENT_BG)
+        version_label_layout = QHBoxLayout(version_label_row)
+        version_label_layout.setContentsMargins(0, 0, 0, 0)
+        version_label_layout.setSpacing(6)
+        version_label_layout.addWidget(QLabel(lang.get("ui.basic.version")))
+
+        self.progress_label = QLabel("")
+        self.progress_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.progress_label.setStyleSheet(
+            STYLE_LABEL_SECONDARY_SMALL +
+            "border: none;"
+        )
+        version_label_layout.addWidget(self.progress_label, stretch=1)
+        grid.addWidget(version_label_row, 0, 1)
 
         self.brand_combo = QComboBox()
         self.brand_combo.setStyleSheet(STYLE_COMBO)
@@ -117,7 +137,30 @@ class BasicTab(QWidget):
         self.version_combo.setStyleSheet(STYLE_COMBO)
         self.version_combo.setEnabled(False)
         self.version_combo.currentTextChanged.connect(self._on_mc_version_changed)
-        grid.addWidget(self.version_combo, 1, 1)
+
+        version_row_widget = QWidget()
+        version_row_widget.setStyleSheet(STYLE_TRANSPARENT_BG)
+        version_row = QHBoxLayout(version_row_widget)
+        version_row.setContentsMargins(0, 0, 0, 0)
+        version_row.setSpacing(6)
+        version_row.addWidget(self.version_combo)
+
+        self.download_btn = QPushButton("📥")
+        self.download_btn.setStyleSheet(
+            STYLE_BUTTON +
+            """
+            QPushButton {
+                padding: 0px;
+                font-size: 16px;
+            }
+            """
+        )
+        self.download_btn.setFixedSize(34, 34)
+        self.download_btn.setToolTip(lang.get("ui.basic.download"))
+        self.download_btn.clicked.connect(self._on_download)
+        version_row.addWidget(self.download_btn)
+
+        grid.addWidget(version_row_widget, 1, 1)
 
         # Loader version in the right column only
         self._loader_ver_label = QLabel(lang.get("ui.basic.loader_version"))
@@ -267,17 +310,10 @@ class BasicTab(QWidget):
         btn_layout.setContentsMargins(12, 8, 12, 0)
         btn_layout.setSpacing(6)
 
-        self.progress_label = QLabel("")
-        self.progress_label.setStyleSheet(
-            STYLE_LABEL_SECONDARY_SMALL +
-            "border: none;"
-        )
-        btn_layout.addWidget(self.progress_label)
-
         btn_row = QHBoxLayout()
-        self.download_btn = QPushButton(lang.get("ui.basic.download"))
-        self.download_btn.setStyleSheet(STYLE_BUTTON)
-        self.download_btn.clicked.connect(self._on_download)
+        self.backup_btn = QPushButton(lang.get("ui.basic.backup"))
+        self.backup_btn.setStyleSheet(STYLE_BUTTON_DARK)
+        self.backup_btn.setEnabled(False)
 
         self.start_btn = QPushButton(lang.get("ui.left.start"))
         self.start_btn.setStyleSheet(STYLE_BUTTON_SUCCESS)
@@ -287,7 +323,7 @@ class BasicTab(QWidget):
         self.stop_btn.setEnabled(False)
         self.stop_btn.setStyleSheet(STYLE_BUTTON_DANGER)
 
-        btn_row.addWidget(self.download_btn)
+        btn_row.addWidget(self.backup_btn)
         btn_row.addWidget(self.start_btn)
         btn_row.addWidget(self.stop_btn)
         btn_layout.addLayout(btn_row)
@@ -579,14 +615,50 @@ class BasicTab(QWidget):
         if expected:
             jar_path = os.path.join(server_dir, expected)
             if os.path.exists(jar_path):
-                reply = QMessageBox.question(
-                    self, lang.get("ui.basic.download"),
-                    lang.get("ui.basic.download.already_exists"),
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                )
-                if reply == QMessageBox.StandardButton.No:
-                    return
+                self._show_download_overwrite_overlay(expected)
+                return
 
+        self._start_download(server_dir, brand, version, loader)
+
+    def _show_download_overwrite_overlay(self, jar_name: str):
+        if self._download_overlay:
+            return
+
+        window = self.window()
+        central = window.centralWidget() if window else None
+        parent = window if window else self
+
+        self._download_overlay = DownloadConfirmOverlay(
+            parent,
+            central,
+            jar_name,
+            confirm_callback=self._on_download_overwrite_confirmed,
+            cancel_callback=self._close_download_overlay
+        )
+        if central:
+            top_left = central.mapTo(parent, central.rect().topLeft())
+            self._download_overlay.setGeometry(
+                top_left.x(), top_left.y(), central.width(), central.height()
+            )
+        else:
+            self._download_overlay.setGeometry(parent.rect())
+        self._download_overlay.show()
+        self._download_overlay.raise_()
+
+    def _close_download_overlay(self):
+        if self._download_overlay:
+            self._download_overlay.close_overlay()
+            self._download_overlay = None
+
+    def _on_download_overwrite_confirmed(self):
+        self._close_download_overlay()
+        server_dir = self.dir_entry.text().strip()
+        brand = self.brand_combo.currentText()
+        version = self.version_combo.currentText()
+        loader = self.loader_combo.currentText()
+        self._start_download(server_dir, brand, version, loader)
+
+    def _start_download(self, server_dir: str, brand: str, version: str, loader: str):
         profile = dict(self._current_profile)
         profile["server_dir"]     = server_dir
         profile["brand"]          = brand
@@ -594,9 +666,9 @@ class BasicTab(QWidget):
         profile["loader_version"] = loader
 
         self.download_btn.setEnabled(False)
-        self.progress_label.setText(
-            lang.get("ui.basic.download.progress").format(0)
-        )
+        self._last_progress_log_time = 0.0
+        self._last_progress_logged_pct = -1
+        self._set_download_progress(0, force_log=True)
 
         self._downloader = ServerDownloader(profile)
         self._downloader.progress.connect(self._on_progress)
@@ -617,9 +689,25 @@ class BasicTab(QWidget):
     def _on_progress(self, downloaded: int, total: int):
         if total > 0:
             pct = int(downloaded / total * 100)
-            self.progress_label.setText(
-                lang.get("ui.basic.download.progress").format(pct)
+            self._set_download_progress(pct)
+
+    def _set_download_progress(self, pct: int, force_log: bool = False):
+        msg = lang.get("ui.basic.download.progress").format(pct)
+        self.progress_label.setText(msg)
+
+        now = time.monotonic()
+        should_log = (
+            force_log or
+            pct >= 100 or
+            (
+                pct != self._last_progress_logged_pct and
+                now - self._last_progress_log_time >= 1.0
             )
+        )
+        if should_log:
+            self._log(f"[INFO] {msg}")
+            self._last_progress_log_time = now
+            self._last_progress_logged_pct = pct
 
     def _on_download_finished(self, path: str):
         self.download_btn.setEnabled(True)

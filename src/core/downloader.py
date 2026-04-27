@@ -123,4 +123,3 @@ class ServerDownloader(QThread):
                     downloaded += len(chunk)
                     self.progress.emit(downloaded, total)
 
-        self.log.emit(f"[INFO] Download complete: {save_path}")
