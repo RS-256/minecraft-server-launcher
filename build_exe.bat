@@ -23,4 +23,4 @@ if errorlevel 1 (
 
 echo.
 echo Build complete.
-echo Executable: "%OUTPUT_DIR%\main.exe"
+echo Executable: "%OUTPUT_DIR%\minecraft_server_launcher.exe"
