@@ -6,7 +6,8 @@ from PyQt6.QtGui import QPainter, QColor
 from ui.left_panel import LeftPanel
 from ui.right_panel import RightPanel
 from ui.overlays.overlay_menu import OverlayMenu
-from core.server_process import ServerProcess
+from core.downloader import ServerDownloader
+from core.server_process import ServerProcess, _find_jar
 from ui.theme import (
     STYLE_WINDOW, STYLE_LABEL, STYLE_INPUT, STYLE_BUTTON,
     STYLE_COMBO, STYLE_BOTTOM_BAR, MENU_WIDTH, FONT_SIZE_SMALL,
@@ -51,6 +52,8 @@ class AppWindow(QMainWindow):
         self._menu_open      = False
         self._current_profile: dict | None = None
         self._server_process: ServerProcess | None = None
+        self._startup_downloader: ServerDownloader | None = None
+        self._pending_start_profile: dict | None = None
         self._setup_window()
         self._build()
         self._load_initial_profile()
@@ -240,6 +243,8 @@ class AppWindow(QMainWindow):
     def _on_start_server(self):
         if self._server_process is not None:
             return
+        if self._startup_downloader is not None:
+            return
         if not self._current_profile:
             return
 
@@ -248,6 +253,114 @@ class AppWindow(QMainWindow):
         profile = dict(self._current_profile)
         # Get server_dir from the Basic tab UI
         profile["server_dir"] = self.left_panel.basic_tab.dir_entry.text().strip()
+        profile.update(self.left_panel.basic_tab.get_values())
+        profile.update(self.left_panel.jvm_tab.get_values())
+
+        if not self._ensure_startup_files(profile):
+            return
+
+        self._start_server_process(profile)
+
+    def _ensure_startup_files(self, profile: dict) -> bool:
+        server_dir = profile.get("server_dir", "").strip()
+        if not server_dir:
+            self.right_panel.log_display.append_log("[ERROR] Server directory is not set.")
+            return False
+        try:
+            os.makedirs(server_dir, exist_ok=True)
+        except Exception as e:
+            self.right_panel.log_display.append_log(
+                f"[ERROR] Failed to create server directory: {e}"
+            )
+            return False
+
+        if profile.get("custom_jar", False) and not profile.get("jar_path", "").strip():
+            self.right_panel.log_display.append_log(
+                "[ERROR] Custom jar is enabled but jar path is not set."
+            )
+            return False
+
+        target_jar = self._missing_jar_download_target(profile)
+        if not target_jar:
+            return True
+
+        profile["target_jar_path"] = target_jar
+        self._pending_start_profile = profile
+        self.right_panel.log_display.append_log(
+            f"[INFO] Required jar not found. Downloading before start: {target_jar}"
+        )
+        self._start_startup_download(profile)
+        return False
+
+    def _missing_jar_download_target(self, profile: dict) -> str:
+        server_dir = profile.get("server_dir", "").strip()
+        if profile.get("custom_jar", False):
+            jar_path = profile.get("jar_path", "").strip()
+            if not os.path.isabs(jar_path):
+                jar_path = os.path.join(server_dir, jar_path)
+            profile["jar_path"] = jar_path
+            return "" if os.path.exists(jar_path) else jar_path
+
+        if _find_jar(profile):
+            return ""
+
+        expected = self.left_panel.basic_tab._expected_jar_name(
+            profile.get("brand", "vanilla"),
+            profile.get("version", ""),
+            profile.get("loader_version", "")
+        )
+        if not expected:
+            return ""
+        return os.path.join(server_dir, expected)
+
+    def _start_startup_download(self, profile: dict):
+        self.left_panel.basic_tab.start_btn.setEnabled(False)
+        self.left_panel.basic_tab.stop_btn.setEnabled(False)
+        self.left_panel.basic_tab.download_btn.setEnabled(False)
+        self.left_panel.basic_tab.progress_label.setText(
+            lang.get("ui.basic.download.progress").format(0)
+        )
+
+        self._startup_downloader = ServerDownloader(profile)
+        self._startup_downloader.progress.connect(self._on_startup_download_progress)
+        self._startup_downloader.finished.connect(self._on_startup_download_finished)
+        self._startup_downloader.failed.connect(self._on_startup_download_failed)
+        self._startup_downloader.log.connect(self.right_panel.log_display.append_log)
+        self._startup_downloader.start()
+
+    def _on_startup_download_progress(self, downloaded: int, total: int):
+        if total <= 0:
+            return
+        pct = int(downloaded / total * 100)
+        self.left_panel.basic_tab.progress_label.setText(
+            lang.get("ui.basic.download.progress").format(pct)
+        )
+
+    def _on_startup_download_finished(self, path: str):
+        self.right_panel.log_display.append_log(
+            f"[INFO] {lang.get('ui.basic.download.complete')}: {path}"
+        )
+        self.left_panel.basic_tab.progress_label.setText(
+            lang.get("ui.basic.download.complete")
+        )
+        profile = self._pending_start_profile
+        self._startup_downloader = None
+        self._pending_start_profile = None
+        if profile:
+            self.left_panel.jvm_tab.notify_profile_changed()
+            self._start_server_process(profile)
+
+    def _on_startup_download_failed(self, error: str):
+        self.right_panel.log_display.append_log(
+            f"[ERROR] {lang.get('ui.basic.download.failed').format(error)}"
+        )
+        self._startup_downloader = None
+        self._pending_start_profile = None
+        self.left_panel.basic_tab.start_btn.setEnabled(True)
+        self.left_panel.basic_tab.stop_btn.setEnabled(False)
+        self.left_panel.basic_tab.download_btn.setEnabled(True)
+
+    def _start_server_process(self, profile: dict):
 
         self._server_process = ServerProcess(profile)
         self._server_process.log_received.connect(
@@ -264,6 +377,7 @@ class AppWindow(QMainWindow):
 
     def _on_stop_server(self):
         if self._server_process:
+            self.left_panel.basic_tab.stop_btn.setEnabled(False)
             self._server_process.stop()
 
     def _on_send_command(self, command: str):
@@ -274,7 +388,6 @@ class AppWindow(QMainWindow):
         self.right_panel.log_display.append_log("[INFO] Server started.")
         if self._current_profile:
             self._current_profile["_running"] = True
-            self.left_panel.apply_profile(self._current_profile)
         self.left_panel.set_server_running(True)
 
     def _on_server_stopped(self, exit_code: int):
@@ -289,12 +402,14 @@ class AppWindow(QMainWindow):
         self.left_panel.basic_tab.download_btn.setEnabled(True)
         if self._current_profile:
             self._current_profile["_running"] = False
-            self.left_panel.apply_profile(self._current_profile)
         self.left_panel.set_server_running(False)
 
     def _on_server_failed(self, error: str):
         self.right_panel.log_display.append_log(f"[ERROR] {error}")
         self._server_process = None
+        if self._current_profile:
+            self._current_profile["_running"] = False
+        self.left_panel.set_server_running(False)
         self.left_panel.basic_tab.start_btn.setEnabled(True)
         self.left_panel.basic_tab.stop_btn.setEnabled(False)
         self.left_panel.basic_tab.download_btn.setEnabled(True)

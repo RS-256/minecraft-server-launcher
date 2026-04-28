@@ -4,22 +4,30 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton,
     QCheckBox, QFrame, QFileDialog,
-    QComboBox, QScrollArea
+    QComboBox, QScrollArea, QToolButton, QMenu, QSizePolicy
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
 from ui.theme import (
     STYLE_BUTTON, STYLE_BUTTON_SUCCESS, STYLE_BUTTON_DANGER,
-    STYLE_BUTTON_DARK, STYLE_INPUT, STYLE_CHECKBOX, STYLE_COMBO,
+    STYLE_INPUT, STYLE_CHECKBOX, STYLE_COMBO,
     STYLE_INPUT_DISABLED, STYLE_SCROLL_AREA_THIN,
     STYLE_TRANSPARENT_BG, STYLE_BOTTOM_ACTION_BAR,
     STYLE_SEPARATOR, STYLE_LABEL_SECONDARY_SMALL,
     STYLE_LABEL_DISABLED_SMALL, STYLE_LABEL_PRIMARY_SMALL,
-    STYLE_CHECKBOX_DISABLED_TEXT, BROWSE_BUTTON_WIDTH
+    STYLE_CHECKBOX_DISABLED_TEXT, BROWSE_BUTTON_WIDTH,
+    COLOR_BG_TERTIARY, COLOR_BORDER, COLOR_TEXT_PRIMARY,
+    COLOR_DISABLED, COLOR_TEXT_DISABLED, COLOR_ACCENT,
+    ICON_CHEVRON_DOWN
 )
 from ui.widgets.collapsible_section import CollapsibleSection
 from ui.overlays.download_confirm_overlay import DownloadConfirmOverlay
 from core.lang import lang
 from core.profile_manager import get_server_profiles_dir
+from core.backup import (
+    BACKUP_SCOPE_FULL, BACKUP_SCOPE_WORLD, BACKUP_SCOPE_WORLD_CONFIG
+)
+from core.backup import create_backup
 from core.downloader import ServerDownloader
 from core.instance import save_profile_field, check_eula
 from core.version_fetcher import (
@@ -29,6 +37,44 @@ from core.version_fetcher import (
 
 BRANDS = ["vanilla", "fabric", "neoforge", "spigot", "paper"]
 FILTER_CATEGORIES = ["release", "snapshot", "beta", "alpha"]
+ACTION_BUTTON_HEIGHT = 36
+
+STYLE_BACKUP_MENU_BUTTON = f"""
+    QToolButton {{
+        background-color: {COLOR_BG_TERTIARY};
+        color: {COLOR_TEXT_PRIMARY};
+        border: 1px solid {COLOR_BORDER};
+        border-radius: 6px;
+        padding: 6px;
+        font-size: 12px;
+    }}
+    QToolButton:hover {{ background-color: rgb(74, 74, 74); }}
+    QToolButton:disabled {{
+        background-color: {COLOR_DISABLED};
+        color: {COLOR_TEXT_DISABLED};
+    }}
+    QToolButton::menu-button {{
+        border-left: 1px solid {COLOR_BORDER};
+        width: 24px;
+    }}
+    QToolButton::menu-arrow {{
+        image: url("{ICON_CHEVRON_DOWN}");
+        width: 10px;
+        height: 10px;
+    }}
+    QMenu {{
+        background-color: {COLOR_BG_TERTIARY};
+        color: {COLOR_TEXT_PRIMARY};
+        border: 1px solid {COLOR_BORDER};
+    }}
+    QMenu::item {{
+        padding: 6px 22px 6px 10px;
+    }}
+    QMenu::item:selected {{
+        background-color: {COLOR_ACCENT};
+        color: white;
+    }}
+"""
 
 # Available filters by brand
 BRAND_FILTERS = {
@@ -311,21 +357,56 @@ class BasicTab(QWidget):
         btn_layout.setSpacing(6)
 
         btn_row = QHBoxLayout()
-        self.backup_btn = QPushButton(lang.get("ui.basic.backup"))
-        self.backup_btn.setStyleSheet(STYLE_BUTTON_DARK)
-        self.backup_btn.setEnabled(False)
+        btn_row.setSpacing(6)
+        self.backup_btn = QToolButton()
+        self.backup_btn.setText(lang.get("ui.basic.backup"))
+        self.backup_btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        self.backup_btn.setStyleSheet(STYLE_BACKUP_MENU_BUTTON)
+        self.backup_btn.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+        self.backup_btn.setFixedHeight(ACTION_BUTTON_HEIGHT)
+        self.backup_btn.clicked.connect(
+            lambda: self._run_backup(BACKUP_SCOPE_WORLD)
+        )
+        self._backup_menu = QMenu(self.backup_btn)
+        self._backup_menu.setStyleSheet(STYLE_BACKUP_MENU_BUTTON)
+        self._add_backup_action(
+            lang.get("ui.basic.backup.scope.world"),
+            BACKUP_SCOPE_WORLD
+        )
+        self._add_backup_action(
+            lang.get("ui.basic.backup.scope.world_config"),
+            BACKUP_SCOPE_WORLD_CONFIG
+        )
+        self._add_backup_action(
+            lang.get("ui.basic.backup.scope.full"),
+            BACKUP_SCOPE_FULL
+        )
+        self.backup_btn.setMenu(self._backup_menu)
 
         self.start_btn = QPushButton(lang.get("ui.left.start"))
         self.start_btn.setStyleSheet(STYLE_BUTTON_SUCCESS)
         self.start_btn.setEnabled(False)
+        self.start_btn.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+        self.start_btn.setFixedHeight(ACTION_BUTTON_HEIGHT)
 
         self.stop_btn = QPushButton(lang.get("ui.left.stop"))
         self.stop_btn.setEnabled(False)
         self.stop_btn.setStyleSheet(STYLE_BUTTON_DANGER)
+        self.stop_btn.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+        self.stop_btn.setFixedHeight(ACTION_BUTTON_HEIGHT)
 
-        btn_row.addWidget(self.backup_btn)
-        btn_row.addWidget(self.start_btn)
-        btn_row.addWidget(self.stop_btn)
+        btn_row.addWidget(self.backup_btn, stretch=1)
+        btn_row.addWidget(self.start_btn, stretch=1)
+        btn_row.addWidget(self.stop_btn, stretch=1)
         btn_layout.addLayout(btn_row)
 
         outer.addWidget(btn_area)
@@ -514,6 +595,7 @@ class BasicTab(QWidget):
         path = self.dir_entry.text().strip()
         self._save_field(server_dir=path, eula_agreed=False)
         self._check_eula_file(path)
+        self._refresh_backup_btn()
 
     def _on_eula_toggled(self, checked: bool):
         self._refresh_start_btn()
@@ -563,6 +645,25 @@ class BasicTab(QWidget):
         self._current_profile.update(kwargs)
         save_profile_field(name, **kwargs)
 
+    def _refresh_backup_btn(self):
+        server_dir = self.dir_entry.text().strip()
+        self.backup_btn.setEnabled(bool(server_dir and os.path.isdir(server_dir)))
+
+    def _add_backup_action(self, label: str, scope: str):
+        action = QAction(label, self._backup_menu)
+        action.triggered.connect(lambda _, s=scope: self._run_backup(s))
+        self._backup_menu.addAction(action)
+
+    def _run_backup(self, scope: str):
+        server_dir = self.dir_entry.text().strip()
+        self._save_field(backup_scope=scope)
+        try:
+            path = create_backup(server_dir, scope)
+        except Exception as e:
+            self._log(f"[ERROR] {lang.get('ui.basic.backup.failed').format(e)}")
+            return
+        self._log(f"[INFO] {lang.get('ui.basic.backup.complete')}: {path}")
+
     def _on_custom_jar_toggled(self, checked: bool):
         self._refresh_jar_ui(checked)
         self._save_field(custom_jar=checked)
@@ -580,6 +681,7 @@ class BasicTab(QWidget):
             self.dir_entry.setText(path)
             self._save_field(server_dir=path, eula_agreed=False)
             self._check_eula_file(path)
+            self._refresh_backup_btn()
 
     def _browse_java(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -723,6 +825,7 @@ class BasicTab(QWidget):
     def set_values(self, profile: dict):
         self._current_profile = profile
         self.dir_entry.setText(profile.get("server_dir", ""))
+        self._refresh_backup_btn()
 
         brand = profile.get("brand", "vanilla")
         self.brand_combo.blockSignals(True)
@@ -780,6 +883,7 @@ class BasicTab(QWidget):
             "jar_path":       self.jar_entry.text().strip(),
             "custom_java":    self.custom_java_checkbox.isChecked(),
             "java_path":      self.java_entry.text().strip(),
+            "backup_scope":   self._current_profile.get("backup_scope", BACKUP_SCOPE_WORLD),
         }
     
     def _notify_jvm_tab(self):

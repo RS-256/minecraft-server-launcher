@@ -39,7 +39,12 @@ class ServerDownloader(QThread):
                 self.failed.emit(f"Download not supported for brand: {brand}")
                 return
 
-            save_path = os.path.join(dest, filename)
+            save_path = self._profile.get("target_jar_path", "").strip()
+            if not save_path:
+                save_path = os.path.join(dest, filename)
+            if not save_path.lower().endswith(".jar"):
+                raise ValueError("Download target must be a .jar file.")
+            os.makedirs(os.path.dirname(save_path) or dest, exist_ok=True)
             self.log.emit(f"[INFO] Downloading: {filename}")
             self.log.emit(f"[INFO] URL: {url}")
             self._download(url, save_path)

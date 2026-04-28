@@ -53,7 +53,8 @@ PROFILE_DEFAULTS = {
     "ram_min_mb": 4096,
     "ram_max_mb": 8192,
     "nogui": True,
-    "eula_agreed": False
+    "eula_agreed": False,
+    "backup_scope": "world"
 }
 
 _PROFILES_INDEX_PATH = os.path.join(get_config_dir(), "profiles.json")

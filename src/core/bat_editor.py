@@ -28,7 +28,6 @@ def generate_bat(bat_path: str, java: str, ram_min_mb: int, ram_max_mb: int,
         f"@echo off\n"
         f"{java_str} -Xms{ram_min_mb}M -Xmx{ram_max_mb}M"
         f" -jar {jar_str}{nogui_str}\n"
-        f"pause\n"
     )
     if bat_path:
         write_bat(bat_path, content)

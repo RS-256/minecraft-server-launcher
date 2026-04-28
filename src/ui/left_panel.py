@@ -461,6 +461,8 @@ class LeftPanel(QWidget):
 
     def set_server_running(self, running: bool):
         """Reflect server running state in the indicator."""
+        if hasattr(self, "_status_dot"):
+            self._status_dot.setStyleSheet(style_status_dot(running))
         if hasattr(self, "_delete_btn"):
             self._delete_btn.set_server_running(running)
         if hasattr(self, "_profile_name_label"):
