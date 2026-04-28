@@ -24,6 +24,7 @@ class OverlayMenu(QWidget):
         self._select_profile_callback = select_profile_callback
         self._add_profile_callback    = add_profile_callback
         self._current_profile_name    = ""
+        self._running_profiles: dict[str, bool] = {}
         self._anim = None
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
         self._build()
@@ -93,10 +94,14 @@ class OverlayMenu(QWidget):
         profiles = get_all_profiles()
         for profile in profiles:
             name = profile.get("name", "")
+            running = self._running_profiles.get(
+                name,
+                profile.get("_running", False)
+            )
             list_layout.addWidget(self._make_separator())
             item = ProfileListItem(
                 profile=profile,
-                running=profile.get("_running", False),
+                running=running,
                 selected=name == self._current_profile_name
             )
             item.clicked.connect(self._on_profile_clicked)
@@ -140,6 +145,13 @@ class OverlayMenu(QWidget):
         if self._current_profile_name == name:
             return
         self._current_profile_name = name
+        self._refresh_list()
+
+    def set_profile_running(self, name: str, running: bool):
+        """Update runtime status for a profile shown in the menu."""
+        if not name:
+            return
+        self._running_profiles[name] = running
         self._refresh_list()
 
     def slide_in(self, x: int, y: int, width: int, height: int):

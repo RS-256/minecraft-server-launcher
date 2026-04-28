@@ -6,6 +6,7 @@ from PyQt6.QtGui import QPainter, QColor
 from ui.left_panel import LeftPanel
 from ui.right_panel import RightPanel
 from ui.overlays.overlay_menu import OverlayMenu
+from core.bat_editor import generate_bat
 from core.downloader import ServerDownloader
 from core.server_process import ServerProcess, _find_jar
 from ui.theme import (
@@ -51,9 +52,10 @@ class AppWindow(QMainWindow):
         super().__init__()
         self._menu_open      = False
         self._current_profile: dict | None = None
-        self._server_process: ServerProcess | None = None
-        self._startup_downloader: ServerDownloader | None = None
-        self._pending_start_profile: dict | None = None
+        self._server_processes: dict[str, ServerProcess] = {}
+        self._startup_downloaders: dict[str, ServerDownloader] = {}
+        self._pending_start_profiles: dict[str, dict] = {}
+        self._syncing_profile = False
         self._setup_window()
         self._build()
         self._load_initial_profile()
@@ -94,6 +96,12 @@ class AppWindow(QMainWindow):
         # Connect start and stop callbacks
         self.left_panel.basic_tab.start_btn.clicked.connect(self._on_start_server)
         self.left_panel.basic_tab.stop_btn.clicked.connect(self._on_stop_server)
+        self.left_panel.basic_tab.eula_checkbox.toggled.connect(
+            lambda _: self._sync_action_buttons()
+        )
+        self.left_panel.basic_tab.dir_entry.editingFinished.connect(
+            self._sync_action_buttons
+        )
 
         # Connect the command send callback
         self.right_panel.set_send_command_callback(self._on_send_command)
@@ -146,10 +154,21 @@ class AppWindow(QMainWindow):
 
     def _apply_profile(self, profile: dict):
         """Apply a profile to the UI."""
+        name = profile.get("name", "")
+        profile["_running"] = self._is_profile_running(name)
         self._current_profile = profile
-        self.left_panel.apply_profile(profile)
+        self._syncing_profile = True
+        try:
+            self.left_panel.apply_profile(profile)
+        finally:
+            self._syncing_profile = False
         if hasattr(self, "_overlay_menu"):
             self._overlay_menu.set_current_profile_name(profile.get("name", ""))
+            self._overlay_menu.set_profile_running(
+                name,
+                profile.get("_running", False)
+            )
+        self._sync_action_buttons()
 
     def _on_select_profile(self, name: str):
         """Handle selecting a profile from the profile list."""
@@ -177,6 +196,10 @@ class AppWindow(QMainWindow):
         if self._current_profile:
             self._overlay_menu.set_current_profile_name(
                 self._current_profile.get("name", "")
+            )
+            self._overlay_menu.set_profile_running(
+                self._current_profile.get("name", ""),
+                self._is_profile_running(self._current_profile.get("name", ""))
             )
 
         self._bg_dim.setGeometry(0, 0, w, h)
@@ -241,13 +264,13 @@ class AppWindow(QMainWindow):
         return True
 
     def _on_start_server(self):
-        if self._server_process is not None:
-            return
-        if self._startup_downloader is not None:
-            return
         if not self._current_profile:
             return
 
+        name = self._current_profile.get("name", "")
+        if self._is_profile_running(name) or self._is_profile_downloading(name):
+            self._sync_action_buttons()
+            return
 
         self.right_panel.log_display.clear()
         profile = dict(self._current_profile)
@@ -262,6 +285,7 @@ class AppWindow(QMainWindow):
         self._start_server_process(profile)
 
     def _ensure_startup_files(self, profile: dict) -> bool:
+        name = profile.get("name", "")
         server_dir = profile.get("server_dir", "").strip()
         if not server_dir:
             self.right_panel.log_display.append_log("[ERROR] Server directory is not set.")
@@ -285,7 +309,7 @@ class AppWindow(QMainWindow):
             return True
 
         profile["target_jar_path"] = target_jar
-        self._pending_start_profile = profile
+        self._pending_start_profiles[name] = profile
         self.right_panel.log_display.append_log(
             f"[INFO] Required jar not found. Downloading before start: {target_jar}"
         )
@@ -314,105 +338,192 @@ class AppWindow(QMainWindow):
         return os.path.join(server_dir, expected)
 
     def _start_startup_download(self, profile: dict):
-        self.left_panel.basic_tab.start_btn.setEnabled(False)
-        self.left_panel.basic_tab.stop_btn.setEnabled(False)
-        self.left_panel.basic_tab.download_btn.setEnabled(False)
+        name = profile.get("name", "")
+        self._sync_action_buttons()
         self.left_panel.basic_tab.progress_label.setText(
             lang.get("ui.basic.download.progress").format(0)
         )
 
-        self._startup_downloader = ServerDownloader(profile)
-        self._startup_downloader.progress.connect(self._on_startup_download_progress)
-        self._startup_downloader.finished.connect(self._on_startup_download_finished)
-        self._startup_downloader.failed.connect(self._on_startup_download_failed)
-        self._startup_downloader.log.connect(self.right_panel.log_display.append_log)
-        self._startup_downloader.start()
+        downloader = ServerDownloader(profile)
+        downloader.progress.connect(
+            lambda downloaded, total, n=name:
+                self._on_startup_download_progress(n, downloaded, total)
+        )
+        downloader.finished.connect(
+            lambda path, n=name: self._on_startup_download_finished(n, path)
+        )
+        downloader.failed.connect(
+            lambda error, n=name: self._on_startup_download_failed(n, error)
+        )
+        downloader.log.connect(self.right_panel.log_display.append_log)
+        self._startup_downloaders[name] = downloader
+        self._sync_action_buttons()
+        downloader.start()
 
-    def _on_startup_download_progress(self, downloaded: int, total: int):
+    def _on_startup_download_progress(self, name: str, downloaded: int, total: int):
         if total <= 0:
+            return
+        if not self._is_current_profile(name):
             return
         pct = int(downloaded / total * 100)
         self.left_panel.basic_tab.progress_label.setText(
             lang.get("ui.basic.download.progress").format(pct)
         )
 
-    def _on_startup_download_finished(self, path: str):
+    def _on_startup_download_finished(self, name: str, path: str):
         self.right_panel.log_display.append_log(
-            f"[INFO] {lang.get('ui.basic.download.complete')}: {path}"
+            f"[INFO] {name}: {lang.get('ui.basic.download.complete')}: {path}"
         )
-        self.left_panel.basic_tab.progress_label.setText(
-            lang.get("ui.basic.download.complete")
-        )
-        profile = self._pending_start_profile
-        self._startup_downloader = None
-        self._pending_start_profile = None
+        if self._is_current_profile(name):
+            self.left_panel.basic_tab.progress_label.setText(
+                lang.get("ui.basic.download.complete")
+            )
+        profile = self._pending_start_profiles.pop(name, None)
+        self._startup_downloaders.pop(name, None)
+        self._sync_action_buttons()
         if profile:
-            self.left_panel.jvm_tab.notify_profile_changed()
+            self._sync_generated_bat(profile)
             self._start_server_process(profile)
 
-    def _on_startup_download_failed(self, error: str):
+    def _on_startup_download_failed(self, name: str, error: str):
         self.right_panel.log_display.append_log(
-            f"[ERROR] {lang.get('ui.basic.download.failed').format(error)}"
+            f"[ERROR] {name}: {lang.get('ui.basic.download.failed').format(error)}"
         )
-        self._startup_downloader = None
-        self._pending_start_profile = None
-        self.left_panel.basic_tab.start_btn.setEnabled(True)
-        self.left_panel.basic_tab.stop_btn.setEnabled(False)
-        self.left_panel.basic_tab.download_btn.setEnabled(True)
+        self._startup_downloaders.pop(name, None)
+        self._pending_start_profiles.pop(name, None)
+        self._sync_action_buttons()
 
     def _start_server_process(self, profile: dict):
+        name = profile.get("name", "")
+        if not name or self._is_profile_running(name):
+            self._sync_action_buttons()
+            return
+        self._sync_generated_bat(profile)
 
-        self._server_process = ServerProcess(profile)
-        self._server_process.log_received.connect(
+        process = ServerProcess(profile)
+        process.log_received.connect(
             self.right_panel.log_display.append_log
         )
-        self._server_process.started_ok.connect(self._on_server_started)
-        self._server_process.stopped.connect(self._on_server_stopped)
-        self._server_process.failed.connect(self._on_server_failed)
-        self._server_process.start()
+        process.started_ok.connect(
+            lambda n=name: self._on_server_started(n)
+        )
+        process.stopped.connect(
+            lambda exit_code, n=name: self._on_server_stopped(n, exit_code)
+        )
+        process.failed.connect(
+            lambda error, n=name: self._on_server_failed(n, error)
+        )
+        self._server_processes[name] = process
+        process.start()
 
-        self.left_panel.basic_tab.start_btn.setEnabled(False)
-        self.left_panel.basic_tab.stop_btn.setEnabled(True)
-        self.left_panel.basic_tab.download_btn.setEnabled(False)
+        self._sync_action_buttons()
 
     def _on_stop_server(self):
-        if self._server_process:
+        name = self._current_profile.get("name", "") if self._current_profile else ""
+        process = self._server_processes.get(name)
+        if process:
             self.left_panel.basic_tab.stop_btn.setEnabled(False)
-            self._server_process.stop()
+            process.stop()
 
     def _on_send_command(self, command: str):
-        if self._server_process:
-            self._server_process.send_command(command)
+        name = self._current_profile.get("name", "") if self._current_profile else ""
+        process = self._server_processes.get(name)
+        if process:
+            process.send_command(command)
 
-    def _on_server_started(self):
-        self.right_panel.log_display.append_log("[INFO] Server started.")
-        if self._current_profile:
-            self._current_profile["_running"] = True
-        self.left_panel.set_server_running(True)
+    def _on_server_started(self, name: str):
+        self.right_panel.log_display.append_log(f"[INFO] {name}: Server started.")
+        self._set_profile_running(name, True)
 
-    def _on_server_stopped(self, exit_code: int):
+    def _on_server_stopped(self, name: str, exit_code: int):
         self.right_panel.log_display.append_log(
-            f"[INFO] Server stopped. (exit code: {exit_code})"
+            f"[INFO] {name}: Server stopped. (exit code: {exit_code})"
         )
-        self._server_process = None
-        self.left_panel.basic_tab.start_btn.setEnabled(
-            self.left_panel.basic_tab.eula_checkbox.isChecked()
-        )
-        self.left_panel.basic_tab.stop_btn.setEnabled(False)
-        self.left_panel.basic_tab.download_btn.setEnabled(True)
-        if self._current_profile:
-            self._current_profile["_running"] = False
-        self.left_panel.set_server_running(False)
+        self._server_processes.pop(name, None)
+        self._set_profile_running(name, False)
 
-    def _on_server_failed(self, error: str):
-        self.right_panel.log_display.append_log(f"[ERROR] {error}")
-        self._server_process = None
+    def _on_server_failed(self, name: str, error: str):
+        self.right_panel.log_display.append_log(f"[ERROR] {name}: {error}")
+        self._server_processes.pop(name, None)
+        self._set_profile_running(name, False)
+
+    def _is_current_profile(self, name: str) -> bool:
+        return bool(
+            self._current_profile and
+            self._current_profile.get("name", "") == name
+        )
+
+    def _is_profile_running(self, name: str) -> bool:
+        return bool(name and name in self._server_processes)
+
+    def _is_profile_downloading(self, name: str) -> bool:
+        return bool(name and name in self._startup_downloaders)
+
+    def _set_profile_running(self, name: str, running: bool):
+        self._overlay_menu.set_profile_running(name, running)
+        if self._is_current_profile(name):
+            if self._current_profile:
+                self._current_profile["_running"] = running
+            self.left_panel.set_server_running(running)
+            self._sync_action_buttons()
+
+    def _sync_action_buttons(self):
+        if not self._current_profile or self._syncing_profile:
+            return
+
+        name = self._current_profile.get("name", "")
+        running = self._is_profile_running(name)
+        downloading = self._is_profile_downloading(name)
+        eula_ok = self.left_panel.basic_tab.eula_checkbox.isChecked()
+
+        self.left_panel.basic_tab.start_btn.setEnabled(
+            eula_ok and not running and not downloading
+        )
+        self.left_panel.basic_tab.stop_btn.setEnabled(running)
+        self.left_panel.basic_tab.download_btn.setEnabled(
+            not running and not downloading
+        )
+
         if self._current_profile:
-            self._current_profile["_running"] = False
-        self.left_panel.set_server_running(False)
-        self.left_panel.basic_tab.start_btn.setEnabled(True)
-        self.left_panel.basic_tab.stop_btn.setEnabled(False)
-        self.left_panel.basic_tab.download_btn.setEnabled(True)
+            self._current_profile["_running"] = running
+            self._overlay_menu.set_profile_running(
+                name,
+                running
+            )
+        self.left_panel.set_server_running(running)
+
+    def _sync_generated_bat(self, profile: dict):
+        if profile.get("custom_flags", False):
+            return
+
+        server_dir = profile.get("server_dir", "").strip()
+        exec_file = profile.get("exec_file", "").strip() or "start.bat"
+        if not server_dir or not exec_file.endswith(".bat"):
+            return
+
+        jar_path = profile.get("target_jar_path", "").strip() or _find_jar(profile)
+        if not jar_path:
+            return
+
+        jar_name = jar_path
+        try:
+            if os.path.dirname(os.path.abspath(jar_path)) == os.path.abspath(server_dir):
+                jar_name = os.path.basename(jar_path)
+        except Exception:
+            pass
+
+        java = "java"
+        if profile.get("custom_java", False):
+            java = profile.get("java_path", "").strip() or "java"
+
+        generate_bat(
+            bat_path=os.path.join(server_dir, exec_file),
+            java=java,
+            ram_min_mb=profile.get("ram_min_mb", 4096),
+            ram_max_mb=profile.get("ram_max_mb", 8192),
+            jar_name=jar_name,
+            nogui=profile.get("nogui", True)
+        )
 
     def on_left_panel_event(self, event: str, **kwargs):
         if event == "profile_deleted":
@@ -459,7 +570,15 @@ class AppWindow(QMainWindow):
             self._overlay_menu.set_current_profile_name("")
 
     def _handle_profile_renamed(self, old_name: str, new_name: str):
+        if old_name in self._server_processes:
+            self._server_processes[new_name] = self._server_processes.pop(old_name)
+        if old_name in self._startup_downloaders:
+            self._startup_downloaders[new_name] = self._startup_downloaders.pop(old_name)
+        if old_name in self._pending_start_profiles:
+            self._pending_start_profiles[new_name] = self._pending_start_profiles.pop(old_name)
+            self._pending_start_profiles[new_name]["name"] = new_name
         if self._current_profile and self._current_profile.get("name") == old_name:
             self._current_profile["name"] = new_name
             self._overlay_menu.set_current_profile_name(new_name)
+            self._sync_action_buttons()
         self._overlay_menu.refresh()

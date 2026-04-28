@@ -2,9 +2,10 @@ import os
 from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPropertyAnimation, QEasingCurve
-from PyQt6.QtGui import QPainter, QColor, QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPropertyAnimation, QEasingCurve, QRectF
+from PyQt6.QtGui import QPainter, QColor, QFont, QPainterPath, QPixmap
 from core.lang import lang
+from core.properties_parser import read_properties
 from ui.theme import (
     STYLE_SCROLL_AREA_TRANSPARENT, STYLE_TRANSPARENT_BG,
     COLOR_TEXT_BRIGHT, COLOR_TEXT_MUTED, COLOR_ACCENT_HOVER
@@ -12,10 +13,17 @@ from ui.theme import (
 
 
 class ProfileIcon(QWidget):
-    def __init__(self, brand: str, running: bool, parent=None):
+    def __init__(
+        self,
+        brand: str,
+        running: bool,
+        icon_path: str = "",
+        parent=None
+    ):
         super().__init__(parent)
         self.brand = brand
         self.running = running
+        self._pixmap = QPixmap(icon_path) if icon_path and os.path.exists(icon_path) else QPixmap()
         self.setFixedSize(40, 40)
 
     def paintEvent(self, event):
@@ -31,16 +39,37 @@ class ProfileIcon(QWidget):
         }
         bg = brand_colors.get(self.brand.lower(), QColor(90, 90, 90, 255))
 
+        icon_rect = self.rect().adjusted(2, 2, -2, -2)
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(bg)
-        p.drawRoundedRect(2, 2, 36, 36, 6, 6)
 
-        font = QFont()
-        font.setPointSize(13)
-        font.setBold(True)
-        p.setFont(font)
-        p.setPen(QColor(255, 255, 255, 220))
-        p.drawText(2, 2, 36, 36, Qt.AlignmentFlag.AlignCenter, self.brand[0].upper())
+        if not self._pixmap.isNull():
+            path = QPainterPath()
+            path.addRoundedRect(QRectF(icon_rect), 6, 6)
+            p.save()
+            p.setClipPath(path)
+            scaled = self._pixmap.scaled(
+                icon_rect.size(),
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            x = icon_rect.x() + (icon_rect.width() - scaled.width()) // 2
+            y = icon_rect.y() + (icon_rect.height() - scaled.height()) // 2
+            p.drawPixmap(x, y, scaled)
+            p.restore()
+        else:
+            p.setBrush(bg)
+            p.drawRoundedRect(icon_rect, 6, 6)
+
+            font = QFont()
+            font.setPointSize(13)
+            font.setBold(True)
+            p.setFont(font)
+            p.setPen(QColor(255, 255, 255, 220))
+            p.drawText(
+                icon_rect,
+                Qt.AlignmentFlag.AlignCenter,
+                self.brand[0].upper()
+            )
 
         dot_color = QColor(76, 175, 80, 255) if self.running else QColor(80, 80, 80, 255)
         p.setPen(QColor(37, 37, 37, 255))
@@ -171,7 +200,7 @@ class ProfileListItem(QWidget):
 
         # Icon
         brand = self._profile.get("brand", "vanilla")
-        icon = ProfileIcon(brand, self._running)
+        icon = ProfileIcon(brand, self._running, self._world_icon_path())
         layout.addWidget(icon, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         # Text area
@@ -252,6 +281,23 @@ class ProfileListItem(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit(self._profile.get("name", ""))
+
+    def _world_icon_path(self) -> str:
+        server_dir = self._profile.get("server_dir", "")
+        if not server_dir:
+            return ""
+        properties_path = os.path.join(server_dir, "server.properties")
+        level_name = read_properties(properties_path).get("level-name", "world")
+        candidates = [
+            os.path.join(server_dir, level_name, "icon.png"),
+            os.path.join(server_dir, "world", "icon.png"),
+            os.path.join(server_dir, "server-icon.png"),
+            os.path.join(server_dir, "icon.png"),
+        ]
+        for path in candidates:
+            if os.path.isfile(path):
+                return path
+        return ""
 
 
 class AddProfileItem(QWidget):
