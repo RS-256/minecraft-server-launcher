@@ -6,8 +6,10 @@ from PyQt6.QtGui import QPainter, QColor
 from ui.left_panel import LeftPanel
 from ui.right_panel import RightPanel
 from ui.overlays.overlay_menu import OverlayMenu
+from ui.overlays.port_conflict_overlay import PortConflictOverlay
 from core.bat_editor import generate_bat
 from core.downloader import ServerDownloader
+from core.properties_parser import read_properties
 from core.server_process import ServerProcess, _find_jar
 from ui.theme import (
     STYLE_WINDOW, STYLE_LABEL, STYLE_INPUT, STYLE_BUTTON,
@@ -56,6 +58,7 @@ class AppWindow(QMainWindow):
         self._startup_downloaders: dict[str, ServerDownloader] = {}
         self._pending_start_profiles: dict[str, dict] = {}
         self._syncing_profile = False
+        self._port_conflict_overlay = None
         self._setup_window()
         self._build()
         self._load_initial_profile()
@@ -272,17 +275,85 @@ class AppWindow(QMainWindow):
             self._sync_action_buttons()
             return
 
-        self.right_panel.log_display.clear()
         profile = dict(self._current_profile)
         # Get server_dir from the Basic tab UI
         profile["server_dir"] = self.left_panel.basic_tab.dir_entry.text().strip()
         profile.update(self.left_panel.basic_tab.get_values())
         profile.update(self.left_panel.jvm_tab.get_values())
 
+        conflict_port, conflicts = self._find_port_conflicts(profile)
+        if conflicts:
+            self._show_port_conflict_overlay(profile, conflict_port, conflicts)
+            return
+
+        self._start_profile_after_warnings(profile)
+
+    def _start_profile_after_warnings(self, profile: dict):
+        self.right_panel.log_display.clear()
+
         if not self._ensure_startup_files(profile):
             return
 
         self._start_server_process(profile)
+
+    def _find_port_conflicts(self, profile: dict) -> tuple[int, list[str]]:
+        port = self._profile_server_port(profile)
+        conflicts = []
+        for name, process in self._server_processes.items():
+            if name == profile.get("name", ""):
+                continue
+            running_port = self._profile_server_port(process.profile)
+            if running_port == port:
+                conflicts.append(name)
+        return port, conflicts
+
+    def _profile_server_port(self, profile: dict) -> int:
+        server_dir = profile.get("server_dir", "").strip()
+        props = read_properties(os.path.join(server_dir, "server.properties"))
+        try:
+            return int(props.get("server-port", 25565))
+        except (TypeError, ValueError):
+            return 25565
+
+    def _show_port_conflict_overlay(
+        self,
+        profile: dict,
+        port: int,
+        conflicting_profiles: list[str]
+    ):
+        if self._port_conflict_overlay:
+            return
+
+        window = self.window()
+        central = window.centralWidget() if window else None
+        parent = window if window else self
+
+        self._port_conflict_overlay = PortConflictOverlay(
+            parent,
+            central,
+            port,
+            conflicting_profiles,
+            confirm_callback=lambda p=profile: self._on_port_conflict_confirmed(p),
+            cancel_callback=self._close_port_conflict_overlay
+        )
+        if central:
+            top_left = central.mapTo(parent, central.rect().topLeft())
+            self._port_conflict_overlay.setGeometry(
+                top_left.x(), top_left.y(), central.width(), central.height()
+            )
+        else:
+            self._port_conflict_overlay.setGeometry(parent.rect())
+        self._port_conflict_overlay.show()
+        self._port_conflict_overlay.raise_()
+
+    def _close_port_conflict_overlay(self):
+        if self._port_conflict_overlay:
+            self._port_conflict_overlay.close_overlay()
+            self._port_conflict_overlay = None
+
+    def _on_port_conflict_confirmed(self, profile: dict):
+        self._close_port_conflict_overlay()
+        self._start_profile_after_warnings(profile)
 
     def _ensure_startup_files(self, profile: dict) -> bool:
         name = profile.get("name", "")

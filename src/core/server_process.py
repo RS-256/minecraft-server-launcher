@@ -124,6 +124,10 @@ class ServerProcess(QThread):
         self._profile = profile
         self._process: subprocess.Popen | None = None
 
+    @property
+    def profile(self) -> dict:
+        return self._profile
+
     def send_command(self, command: str):
         """Send a command to the server."""
         if self._process and self._process.stdin:
